@@ -1,7 +1,7 @@
 ## 📊 Dataset Access
 The full DuckDB database for this project is available for download:
 
-* [**Download olist_ecommerce.db**](https://github.com/YourUsername/YourRepo/releases/download/v1.0.0/olist_ecommerce.db)
+* [**Download olist_ecommerce.db**](https://github.com/chinwarsoon/dsai-5m-projects/releases/download/Data/olist_ecommerce.db)
 
 ### How to load the data in Python:
 ```python
