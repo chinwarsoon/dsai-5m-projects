@@ -1,4 +1,4 @@
-# main.ipynb
+# 1. main.ipynb
 The notebook was created in google golab. Please use google colab to open it:
 1. Fork this repo to yours.
 2. Use Chrome to open your repo, click main.ipynb to open it.
@@ -11,8 +11,8 @@ The full DuckDB database for this project is available for download:
 * [**Dowload olist_ecommerce_star.db**](https://github.com/chinwarsoon/dsai-5m-projects/releases/download/star_schema_data/olist_ecommerce_star.db)
 
 
-# Pieline
-# Olist E-commerce ELT Pipeline (DuckDB to BigQuery)
+# 2. Pieline
+## Olist E-commerce ELT Pipeline (DuckDB to BigQuery)
 
 This project automates the extraction of star-schema data from a local DuckDB instance and loads it into Google BigQuery using **Meltano**. It is designed to work in restricted corporate environments where direct Git access may be limited.
 
