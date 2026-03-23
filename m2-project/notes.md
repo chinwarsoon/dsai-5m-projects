@@ -10,12 +10,6 @@ The full DuckDB database for this project is available for download:
 * [**Download olist_ecommerce.db**](https://github.com/chinwarsoon/dsai-5m-projects/releases/download/Data/olist_ecommerce.db)
 * [**Dowload olist_ecommerce_star.db**](https://github.com/chinwarsoon/dsai-5m-projects/releases/download/star_schema_data/olist_ecommerce_star.db)
 
-### How to load the data in Python:
-```python
-import duckdb
-con = duckdb.connect('olist_ecommerce.db')
-print(con.execute("SHOW TABLES").fetchdf())
-
 
 # Pieline
 # Olist E-commerce ELT Pipeline (DuckDB to BigQuery)
