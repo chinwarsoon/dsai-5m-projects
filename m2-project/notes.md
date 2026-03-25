@@ -3,13 +3,20 @@ The notebook was created in google golab. Please use google colab to open it:
 1. Fork this repo to yours.
 2. Use Chrome to open your repo, click main.ipynb to open it.
 3. Make sure you have Colab extension installed in Chrome. Click the extention to open the notebook.
+4. Now you have the notebook opened in your colab. You need to upload the two data files (links given below) to your current working folder in Colab.
+5. Also you need to generate and upload you Json key which is from your google Cloud. Make sure you create a service and assign your role in google Cloud first.
+6. Run the code cell by cell in sequence. If any question, just open AI Agent at the bottom to ask solutions.
+7. Enjoy ...
 
 ## 📊 Dataset Access
 The full DuckDB database for this project is available for download:
 
 * [**Download olist_ecommerce.db**](https://github.com/chinwarsoon/dsai-5m-projects/releases/download/Data/olist_ecommerce.db)
 * [**Dowload olist_ecommerce_star.db**](https://github.com/chinwarsoon/dsai-5m-projects/releases/download/star_schema_data/olist_ecommerce_star.db)
+* [**Dowload presentation video**](https://github.com/chinwarsoon/dsai-5m-projects/releases/download/Video/Olist__Chaos_to_Clarity.mp4)
 
+
+# Process below will be tried later on. Check out this file for updates.
 
 # 2. Pieline
 ## Olist E-commerce ELT Pipeline (DuckDB to BigQuery)
