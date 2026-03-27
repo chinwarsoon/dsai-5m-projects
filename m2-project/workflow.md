@@ -30,11 +30,17 @@ graph TD
     
     J -->|Use pandas_gbq| K["📤 Load Tables<br/>- All dimensions<br/>- fact_orders"]
     
-    K -->|Step 4: Data Quality| L["🛡️ DQ Testing"]
+    K -->|Step 4: Data Quality| L["🛡️ Data Quality Testing"]
     
-    L -->|Tests| M["📋 Test Suite<br/>- Volumetry Check<br/>- Null Checks<br/>- Duplicate Checks<br/>- Referential Integrity"]
+    L -->|Framework Checks| M["📘 Great Expectations<br/>Validation Suites"]
+    L -->|SQL Checks| N["🧪 Data Quality Test<br/>Custom SQL Rules"]
     
-    M -->|Pass/Remediate| N["✅ DQ Report<br/>(PDF Export)"]
+    M -->|Pass/Remediate| O1["✅ DQ Report<br/>(PDF/Notebook Output)"]
+    N -->|Pass/Remediate| O1
+    
+    J -->|Step 6: Pipeline Orchestration| Y["⏰ Pipeline Orchestration<br/>- Cron Jobs<br/>- GitHub Actions<br/>- Airflow/Dagster"]
+    Y -->|Schedule ELT + DQ| K
+    Y -->|Schedule ELT + DQ| L
     
     J -->|Step 5: Analytics Engine| O["🔧 SQLAlchemy<br/>BigQuery Connection"]
     
@@ -66,6 +72,7 @@ graph TD
     style L fill:#ffe0b2,color:#000,stroke:#e65100,stroke-width:2px
     style M fill:#ffe0b2,color:#000,stroke:#e65100,stroke-width:2px
     style N fill:#ffe0b2,color:#000,stroke:#e65100,stroke-width:2px
+    style O1 fill:#ffe0b2,color:#000,stroke:#e65100,stroke-width:2px
     style O fill:#e1bee7,color:#000,stroke:#4a148c,stroke-width:2px
     style P fill:#e1bee7,color:#000,stroke:#4a148c,stroke-width:2px
     style Q fill:#ffccbc,color:#000,stroke:#bf360c,stroke-width:2px
@@ -76,6 +83,7 @@ graph TD
     style V fill:#b2ebf2,color:#000,stroke:#006064,stroke-width:2px
     style W fill:#dcedc8,color:#000,stroke:#33691e,stroke-width:2px
     style X fill:#dcedc8,color:#000,stroke:#33691e,stroke-width:2px
+    style Y fill:#fff9c4,color:#000,stroke:#f57f17,stroke-width:2px
 ```
 
 ---
