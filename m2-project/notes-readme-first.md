@@ -100,7 +100,7 @@ Folder structure:
   - `output`: Resutls for main.ipynb are provided here.
   - `reference`: Module instruction and AI generated summary are provided here.
   - `workflow`: All codes are generated in Colab. This allows team to access at any place to review details.
-  - `schema`: Schema design to drive the project assest develpment.
+  - `schema`: Schema design to drive the project assest developement.
 
 
 ---
