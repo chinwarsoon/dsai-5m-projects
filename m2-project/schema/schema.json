@@ -1,0 +1,538 @@
+{
+  "project": {
+    "name": "Olist Data Platform",
+    "directory": "m2-project",
+    "derived_from": [
+      "workflow/main.ipynb",
+      "workflow/workflow.md",
+      "architecture/architecture.md",
+      "final_project_report.md",
+      "final_presentation_deck.md",
+      "notes-readme-first.md"
+    ],
+    "description": "Schema derived from the project materials under m2-project, covering the raw layer, staging view, analytics star schema, BigQuery serving layer, and related data-quality notes."
+  },
+  "layers": {
+    "raw": {
+      "schema": "main",
+      "tables": [
+        "olist_orders_dataset",
+        "olist_customers_dataset",
+        "olist_order_items_dataset",
+        "olist_order_payments_dataset",
+        "olist_products_dataset",
+        "product_category_name_translation",
+        "olist_sellers_dataset",
+        "olist_geolocation_dataset"
+      ]
+    },
+    "staging": {
+      "views": [
+        {
+          "name": "main_orders_view",
+          "source_tables": [
+            {
+              "name": "olist_orders_dataset",
+              "alias": "o"
+            },
+            {
+              "name": "olist_customers_dataset",
+              "alias": "c"
+            },
+            {
+              "name": "olist_order_items_dataset",
+              "alias": "oi"
+            },
+            {
+              "name": "olist_order_payments_dataset",
+              "alias": "op"
+            }
+          ],
+          "join_logic": [
+            "o.customer_id = c.customer_id",
+            "o.order_id = oi.order_id",
+            "o.order_id = op.order_id"
+          ],
+          "columns": [
+            "order_id",
+            "customer_id",
+            "order_status",
+            "order_purchase_timestamp",
+            "order_approved_at",
+            "order_delivered_carrier_date",
+            "order_delivered_customer_date",
+            "order_estimated_delivery_date",
+            "customer_unique_id",
+            "customer_zip_code_prefix",
+            "customer_city",
+            "customer_state",
+            "order_item_id",
+            "product_id",
+            "seller_id",
+            "shipping_limit_date",
+            "price",
+            "freight_value",
+            "payment_sequential",
+            "payment_type",
+            "payment_installments",
+            "payment_value"
+          ]
+        }
+      ]
+    },
+    "analytics": {
+      "schema": "analytics",
+      "tables": [
+        {
+          "name": "dim_customer",
+          "kind": "dimension",
+          "purpose": "Customer descriptive attributes",
+          "primary_key": "customer_pk",
+          "columns": [
+            {
+              "name": "customer_pk",
+              "type": "BIGINT",
+              "role": "surrogate_primary_key"
+            },
+            {
+              "name": "customer_id",
+              "type": "VARCHAR",
+              "role": "natural_key"
+            },
+            {
+              "name": "customer_unique_id",
+              "type": "VARCHAR"
+            },
+            {
+              "name": "customer_zip_code_prefix",
+              "type": "BIGINT"
+            },
+            {
+              "name": "customer_city",
+              "type": "VARCHAR"
+            },
+            {
+              "name": "customer_state",
+              "type": "VARCHAR"
+            }
+          ],
+          "population_rule": {
+            "source": "main_orders_view",
+            "method": "SELECT DISTINCT with ROW_NUMBER() OVER (ORDER BY customer_id)"
+          }
+        },
+        {
+          "name": "dim_product",
+          "kind": "dimension",
+          "purpose": "Product descriptive attributes",
+          "primary_key": "product_pk",
+          "columns": [
+            {
+              "name": "product_pk",
+              "type": "BIGINT",
+              "role": "surrogate_primary_key"
+            },
+            {
+              "name": "product_id",
+              "type": "VARCHAR",
+              "role": "natural_key"
+            },
+            {
+              "name": "product_category_name",
+              "type": "VARCHAR"
+            },
+            {
+              "name": "product_category_name_english",
+              "type": "VARCHAR"
+            },
+            {
+              "name": "product_name_lenght",
+              "type": "DOUBLE",
+              "note": "Source field spelling preserved"
+            },
+            {
+              "name": "product_description_lenght",
+              "type": "DOUBLE",
+              "note": "Source field spelling preserved"
+            },
+            {
+              "name": "product_photos_qty",
+              "type": "DOUBLE"
+            },
+            {
+              "name": "product_weight_g",
+              "type": "DOUBLE"
+            },
+            {
+              "name": "product_length_cm",
+              "type": "DOUBLE"
+            },
+            {
+              "name": "product_height_cm",
+              "type": "DOUBLE"
+            },
+            {
+              "name": "product_width_cm",
+              "type": "DOUBLE"
+            }
+          ],
+          "population_rule": {
+            "source": "olist_products_dataset",
+            "enrichment": "product_category_name_translation",
+            "method": "SELECT DISTINCT with ROW_NUMBER() OVER (ORDER BY op.product_id)"
+          },
+          "unknown_member": {
+            "enabled": true,
+            "primary_key_value": 0
+          }
+        },
+        {
+          "name": "dim_seller",
+          "kind": "dimension",
+          "purpose": "Seller descriptive attributes",
+          "primary_key": "seller_pk",
+          "columns": [
+            {
+              "name": "seller_pk",
+              "type": "BIGINT",
+              "role": "surrogate_primary_key"
+            },
+            {
+              "name": "seller_id",
+              "type": "VARCHAR",
+              "role": "natural_key"
+            },
+            {
+              "name": "seller_zip_code_prefix",
+              "type": "BIGINT"
+            },
+            {
+              "name": "seller_city",
+              "type": "VARCHAR"
+            },
+            {
+              "name": "seller_state",
+              "type": "VARCHAR"
+            }
+          ],
+          "population_rule": {
+            "source": "olist_sellers_dataset",
+            "method": "SELECT DISTINCT with ROW_NUMBER() OVER (ORDER BY seller_id)"
+          }
+        },
+        {
+          "name": "dim_geolocation",
+          "kind": "dimension",
+          "purpose": "Reusable geographic lookup by ZIP prefix and coordinates",
+          "primary_key": "geolocation_pk",
+          "columns": [
+            {
+              "name": "geolocation_pk",
+              "type": "BIGINT",
+              "role": "surrogate_primary_key"
+            },
+            {
+              "name": "geolocation_zip_code_prefix",
+              "type": "BIGINT"
+            },
+            {
+              "name": "geolocation_lat",
+              "type": "DOUBLE"
+            },
+            {
+              "name": "geolocation_lng",
+              "type": "DOUBLE"
+            },
+            {
+              "name": "geolocation_city",
+              "type": "VARCHAR"
+            },
+            {
+              "name": "geolocation_state",
+              "type": "VARCHAR"
+            }
+          ],
+          "population_rule": {
+            "source": "olist_geolocation_dataset",
+            "method": "SELECT DISTINCT with ROW_NUMBER() OVER (ORDER BY geolocation_zip_code_prefix, geolocation_lat, geolocation_lng)"
+          },
+          "unknown_member": {
+            "enabled": true,
+            "primary_key_value": 0
+          }
+        },
+        {
+          "name": "dim_time",
+          "kind": "dimension",
+          "purpose": "Date dimension for order lifecycle dates",
+          "primary_key": "time_pk",
+          "columns": [
+            {
+              "name": "time_pk",
+              "type": "BIGINT",
+              "role": "surrogate_primary_key",
+              "format": "YYYYMMDD"
+            },
+            {
+              "name": "full_date",
+              "type": "DATE"
+            },
+            {
+              "name": "year",
+              "type": "INTEGER"
+            },
+            {
+              "name": "month",
+              "type": "INTEGER"
+            },
+            {
+              "name": "day",
+              "type": "INTEGER"
+            },
+            {
+              "name": "quarter",
+              "type": "INTEGER"
+            },
+            {
+              "name": "day_of_week",
+              "type": "INTEGER",
+              "note": "1=Sunday through 7=Saturday"
+            },
+            {
+              "name": "day_name",
+              "type": "VARCHAR"
+            },
+            {
+              "name": "month_name",
+              "type": "VARCHAR"
+            },
+            {
+              "name": "week_of_year",
+              "type": "INTEGER"
+            },
+            {
+              "name": "is_weekend",
+              "type": "BOOLEAN"
+            }
+          ],
+          "population_rule": {
+            "source": "main_orders_view",
+            "method": "GENERATE_SERIES from min/max lifecycle dates"
+          },
+          "unknown_member": {
+            "enabled": true,
+            "primary_key_value": 0
+          }
+        },
+        {
+          "name": "fact_orders",
+          "kind": "fact",
+          "purpose": "Central transactional fact table for order-item-payment level analytics",
+          "primary_key": "order_pk",
+          "grain": [
+            "order",
+            "order item",
+            "payment detail"
+          ],
+          "columns": [
+            {
+              "name": "order_pk",
+              "type": "BIGINT",
+              "role": "surrogate_primary_key"
+            },
+            {
+              "name": "order_id",
+              "type": "VARCHAR",
+              "role": "natural_key"
+            },
+            {
+              "name": "customer_fk",
+              "type": "BIGINT",
+              "references": "analytics.dim_customer.customer_pk"
+            },
+            {
+              "name": "product_fk",
+              "type": "BIGINT",
+              "references": "analytics.dim_product.product_pk"
+            },
+            {
+              "name": "seller_fk",
+              "type": "BIGINT",
+              "references": "analytics.dim_seller.seller_pk"
+            },
+            {
+              "name": "order_purchase_date_fk",
+              "type": "BIGINT",
+              "references": "analytics.dim_time.time_pk"
+            },
+            {
+              "name": "order_approved_date_fk",
+              "type": "BIGINT",
+              "references": "analytics.dim_time.time_pk"
+            },
+            {
+              "name": "order_delivered_carrier_date_fk",
+              "type": "BIGINT",
+              "references": "analytics.dim_time.time_pk"
+            },
+            {
+              "name": "order_delivered_customer_date_fk",
+              "type": "BIGINT",
+              "references": "analytics.dim_time.time_pk"
+            },
+            {
+              "name": "order_estimated_delivery_date_fk",
+              "type": "BIGINT",
+              "references": "analytics.dim_time.time_pk"
+            },
+            {
+              "name": "customer_zip_geolocation_fk",
+              "type": "BIGINT",
+              "references": "analytics.dim_geolocation.geolocation_pk"
+            },
+            {
+              "name": "seller_zip_geolocation_fk",
+              "type": "BIGINT",
+              "references": "analytics.dim_geolocation.geolocation_pk"
+            },
+            {
+              "name": "order_status",
+              "type": "VARCHAR"
+            },
+            {
+              "name": "order_item_id",
+              "type": "BIGINT"
+            },
+            {
+              "name": "shipping_limit_date",
+              "type": "VARCHAR"
+            },
+            {
+              "name": "price",
+              "type": "DOUBLE",
+              "role": "measure"
+            },
+            {
+              "name": "freight_value",
+              "type": "DOUBLE",
+              "role": "measure"
+            },
+            {
+              "name": "payment_sequential",
+              "type": "BIGINT"
+            },
+            {
+              "name": "payment_type",
+              "type": "VARCHAR"
+            },
+            {
+              "name": "payment_installments",
+              "type": "BIGINT",
+              "role": "measure"
+            },
+            {
+              "name": "payment_value",
+              "type": "DOUBLE",
+              "role": "measure"
+            }
+          ],
+          "population_rule": {
+            "source": "main_orders_view",
+            "joins": [
+              "main_orders_view to dim_customer on customer_id and customer_unique_id",
+              "main_orders_view to dim_product on product_id",
+              "main_orders_view to dim_seller on seller_id",
+              "ZIP-prefix lookups to dim_geolocation",
+              "Date keys derived to dim_time in YYYYMMDD format"
+            ],
+            "fallback_logic": "COALESCE(..., 0) to unknown members",
+            "surrogate_key_generation": "MD5 hash of generated UUID cast to BIGINT"
+          }
+        }
+      ]
+    },
+    "serving": {
+      "platform": "BigQuery",
+      "dataset": "olist_reporting",
+      "tables": [
+        "olist_reporting.dim_customer",
+        "olist_reporting.dim_product",
+        "olist_reporting.dim_seller",
+        "olist_reporting.dim_geolocation",
+        "olist_reporting.dim_time",
+        "olist_reporting.fact_orders"
+      ]
+    }
+  },
+  "relationships": [
+    {
+      "from": "analytics.fact_orders.customer_fk",
+      "to": "analytics.dim_customer.customer_pk",
+      "cardinality": "many_to_one"
+    },
+    {
+      "from": "analytics.fact_orders.product_fk",
+      "to": "analytics.dim_product.product_pk",
+      "cardinality": "many_to_one"
+    },
+    {
+      "from": "analytics.fact_orders.seller_fk",
+      "to": "analytics.dim_seller.seller_pk",
+      "cardinality": "many_to_one"
+    },
+    {
+      "from": "analytics.fact_orders.customer_zip_geolocation_fk",
+      "to": "analytics.dim_geolocation.geolocation_pk",
+      "cardinality": "many_to_one"
+    },
+    {
+      "from": "analytics.fact_orders.seller_zip_geolocation_fk",
+      "to": "analytics.dim_geolocation.geolocation_pk",
+      "cardinality": "many_to_one"
+    },
+    {
+      "from": "analytics.fact_orders.order_purchase_date_fk",
+      "to": "analytics.dim_time.time_pk",
+      "cardinality": "many_to_one"
+    },
+    {
+      "from": "analytics.fact_orders.order_approved_date_fk",
+      "to": "analytics.dim_time.time_pk",
+      "cardinality": "many_to_one"
+    },
+    {
+      "from": "analytics.fact_orders.order_delivered_carrier_date_fk",
+      "to": "analytics.dim_time.time_pk",
+      "cardinality": "many_to_one"
+    },
+    {
+      "from": "analytics.fact_orders.order_delivered_customer_date_fk",
+      "to": "analytics.dim_time.time_pk",
+      "cardinality": "many_to_one"
+    },
+    {
+      "from": "analytics.fact_orders.order_estimated_delivery_date_fk",
+      "to": "analytics.dim_time.time_pk",
+      "cardinality": "many_to_one"
+    }
+  ],
+  "data_quality": {
+    "implemented_checks": [
+      "Not-null checks on critical fields such as fact_orders.order_id",
+      "Uniqueness checks such as dim_customer.customer_pk",
+      "Referential integrity checks from fact foreign keys to dimension primary keys",
+      "Volumetry checks between DuckDB and BigQuery",
+      "Business-rule checks such as non-negative measures and key consistency"
+    ],
+    "known_issues_noted_in_project": [
+      "fact_orders.payment_value had null failures in the DQ notebook",
+      "(order_id, order_item_id) is not unique in fact_orders",
+      "Unknown-member remediation is required to preserve referential integrity"
+    ]
+  },
+  "analytics_outputs": [
+    "monthly sales trends",
+    "category revenue analysis",
+    "customer segmentation"
+  ]
+}
