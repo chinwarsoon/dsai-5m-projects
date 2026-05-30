@@ -326,6 +326,12 @@ class AdvancedRetriever(Retriever):
         """
         self.logger.enter_function("AdvancedRetriever.query_with_grouping")
         self.logger.info(f"Querying with grouping by {group_by}", "AdvancedRetriever.query_with_grouping")
+
+        group_column = group_by
+        for strategy in self.grouping_config:
+            if strategy.get('name') == group_by:
+                group_column = strategy.get('column', group_by)
+                break
         
         # Get all unique values for the grouping column
         all_results = self.query(query_text, k=k * 10, score_threshold=score_threshold)
@@ -334,26 +340,26 @@ class AdvancedRetriever(Retriever):
         grouped = {}
         if 'metadatas' in all_results and all_results['metadatas']:
             for i, metadata in enumerate(all_results['metadatas'][0]):
-                group_value = metadata.get(group_by, 'unknown')
+                group_value = metadata.get(group_column, 'unknown')
                 if group_value not in grouped:
                     grouped[group_value] = {
-                        'ids': [],
-                        'documents': [],
-                        'metadatas': [],
-                        'distances': []
+                        'ids': [[]],
+                        'documents': [[]],
+                        'metadatas': [[]],
+                        'distances': [[]]
                     }
                 
-                grouped[group_value]['ids'].append(all_results['ids'][0][i])
-                grouped[group_value]['documents'].append(all_results['documents'][0][i])
-                grouped[group_value]['metadatas'].append(metadata)
-                grouped[group_value]['distances'].append(all_results['distances'][0][i])
+                grouped[group_value]['ids'][0].append(all_results['ids'][0][i])
+                grouped[group_value]['documents'][0].append(all_results['documents'][0][i])
+                grouped[group_value]['metadatas'][0].append(metadata)
+                grouped[group_value]['distances'][0].append(all_results['distances'][0][i])
         
         # Limit results per group
         for group in grouped:
-            grouped[group]['ids'] = grouped[group]['ids'][:k]
-            grouped[group]['documents'] = grouped[group]['documents'][:k]
-            grouped[group]['metadatas'] = grouped[group]['metadatas'][:k]
-            grouped[group]['distances'] = grouped[group]['distances'][:k]
+            grouped[group]['ids'][0] = grouped[group]['ids'][0][:k]
+            grouped[group]['documents'][0] = grouped[group]['documents'][0][:k]
+            grouped[group]['metadatas'][0] = grouped[group]['metadatas'][0][:k]
+            grouped[group]['distances'][0] = grouped[group]['distances'][0][:k]
         
         self.logger.add_trace_entry(
             "groups_found",

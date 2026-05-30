@@ -4,6 +4,7 @@ Implements local embeddings using sentence-transformers
 """
 
 import numpy as np
+import pandas as pd
 from typing import Dict, Any, List, Optional, Union
 from sentence_transformers import SentenceTransformer
 from .logger import Logger
@@ -26,8 +27,9 @@ class EmbeddingFunction:
         self.logger = logger
         self.logger.enter_function("EmbeddingFunction.__init__")
         
-        self.vector_db_config = config.get('vector_db', {})
-        self.model_name = self.vector_db_config.get('embedding_model', 'all-MiniLM-L6-v2')
+        self.embedding_config = config.get('embeddings', {})
+        self.model_name = self.embedding_config.get('model_name', 'all-MiniLM-L6-v2')
+        self.local_files_only = self.embedding_config.get('local_files_only', True)
         
         self.logger.info(f"Initializing embedding model: {self.model_name}", "EmbeddingFunction.__init__")
         self.logger.add_trace_entry(
@@ -98,8 +100,11 @@ class SentenceTransformerEmbedding(EmbeddingFunction):
         self.name = "sentence-transformers"
         
         try:
-            self.model = SentenceTransformer(self.model_name)
-            self.embedding_dimension = self.model.get_sentence_embedding_dimension()
+            self.model = SentenceTransformer(
+                self.model_name,
+                local_files_only=self.local_files_only
+            )
+            self.embedding_dimension = self.model.get_embedding_dimension()
             
             self.logger.info(
                 f"Loaded model {self.model_name} with dimension {self.embedding_dimension}",

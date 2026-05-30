@@ -262,15 +262,33 @@ class RAGPipeline:
             doc_text = doc.get('document', '')
             metadata = doc.get('metadata', {})
             
-            # Format document with metadata
+            # Format document with the fields most useful for submittal answers.
             if metadata:
-                metadata_str = " | ".join([f"{k}: {v}" for k, v in metadata.items()])
-                formatted_doc = f"[{metadata_str}] {doc_text}"
+                context_fields = [
+                    "Document_ID",
+                    "Submission_Session",
+                    "Department",
+                    "Review_Status",
+                    "Resubmission_Required",
+                    "Resubmission_Overdue_Status",
+                    "Review_Comments",
+                    "Validation_Errors",
+                ]
+                metadata_str = " | ".join(
+                    f"{key}: {metadata[key]}"
+                    for key in context_fields
+                    if key in metadata
+                )
+                formatted_doc = f"[{metadata_str}]"
             else:
                 formatted_doc = doc_text
             
-            # Check if adding this document would exceed max length
+            # Keep at least a truncated excerpt when one source is larger than
+            # the remaining context budget.
             if current_length + len(formatted_doc) > max_context_length:
+                remaining = max_context_length - current_length
+                if remaining > 100:
+                    context_parts.append(formatted_doc[:remaining])
                 break
             
             context_parts.append(formatted_doc)

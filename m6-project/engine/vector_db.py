@@ -4,10 +4,30 @@ Implements local vector database for document submittal register
 """
 
 import chromadb
+import pandas as pd
 from chromadb.config import Settings
 from typing import Dict, Any, List, Optional, Union
 from .logger import Logger
 from .embeddings import EmbeddingFunction, get_embedding_function
+
+
+class ChromaLocalEmbeddingFunction:
+    """Adapter so ChromaDB uses the project's local embedding instance."""
+
+    def __init__(self, embedding_function: EmbeddingFunction):
+        self.embedding_function = embedding_function
+
+    def name(self) -> str:
+        return "m6-local-sentence-transformer"
+
+    def __call__(self, input):
+        return self.embedding_function.embed_texts(list(input))
+
+    def embed_query(self, input):
+        return self.embedding_function.embed_text(input)
+
+    def embed_documents(self, input):
+        return self.embedding_function.embed_texts(list(input))
 
 
 class VectorDatabase:
@@ -15,7 +35,12 @@ class VectorDatabase:
     Vector database wrapper using ChromaDB
     """
     
-    def __init__(self, config: Dict[str, Any], logger: Logger):
+    def __init__(
+        self,
+        config: Dict[str, Any],
+        logger: Logger,
+        embedding_function: Optional[EmbeddingFunction] = None
+    ):
         """
         Initialize vector database
         
@@ -39,21 +64,15 @@ class VectorDatabase:
             settings=Settings(anonymized_telemetry=False)
         )
         
-        # Use ChromaDB's built-in sentence-transformers embedding function
-        from chromadb.utils import embedding_functions
-        
-        embedding_config = config.get('embeddings', {})
-        model_name = embedding_config.get('model_name', 'all-MiniLM-L6-v2')
-        
-        # Create ChromaDB embedding function
-        sentence_transformer_ef = embedding_functions.SentenceTransformerEmbeddingFunction(
-            model_name=model_name
-        )
+        if embedding_function is None:
+            embedding_function = get_embedding_function(config, logger)
+
+        chroma_embedding_function = ChromaLocalEmbeddingFunction(embedding_function)
         
         # Get or create collection
         self.collection = self.client.get_or_create_collection(
             name=self.collection_name,
-            embedding_function=sentence_transformer_ef
+            embedding_function=chroma_embedding_function
         )
         
         self.logger.info(f"Collection '{self.collection_name}' ready", "VectorDatabase.__init__")
@@ -65,6 +84,33 @@ class VectorDatabase:
         )
         
         self.logger.exit_function("VectorDatabase.__init__")
+
+    def _clean_metadata(self, metadata: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Convert row metadata to ChromaDB-compatible scalar values.
+        """
+        cleaned = {}
+        for key, value in metadata.items():
+            if pd.isna(value):
+                continue
+            if hasattr(value, "item"):
+                value = value.item()
+            if isinstance(value, (str, int, float, bool)):
+                cleaned[key] = value
+            else:
+                cleaned[key] = str(value)
+        return cleaned
+
+    def _add_in_batches(self, batch_size: int = 500, **kwargs) -> None:
+        total = len(kwargs["ids"])
+        for start in range(0, total, batch_size):
+            end = start + batch_size
+            batch = {
+                key: value[start:end]
+                for key, value in kwargs.items()
+                if value is not None
+            }
+            self.collection.add(**batch)
     
     def add_documents(
         self,
@@ -84,10 +130,10 @@ class VectorDatabase:
         self.logger.info(f"Adding {len(documents)} documents to collection", "VectorDatabase.add_documents")
         
         try:
-            self.collection.add(
+            clean_metadatas = [self._clean_metadata(metadata) for metadata in metadatas]
+            self._add_in_batches(
                 documents=documents,
-                embeddings=embeddings,
-                metadatas=metadatas,
+                metadatas=clean_metadatas,
                 ids=ids
             )
             
@@ -122,9 +168,10 @@ class VectorDatabase:
         self.logger.info(f"Adding {len(embeddings)} embeddings to collection", "VectorDatabase.add_embeddings")
         
         try:
-            self.collection.add(
+            clean_metadatas = [self._clean_metadata(metadata) for metadata in metadatas]
+            self._add_in_batches(
                 embeddings=embeddings,
-                metadatas=metadatas,
+                metadatas=clean_metadatas,
                 ids=ids
             )
             
@@ -351,7 +398,11 @@ class DocumentStore:
         self.logger.exit_function("DocumentStore.store_rows_with_embeddings")
 
 
-def get_vector_database(config: Dict[str, Any], logger: Logger) -> VectorDatabase:
+def get_vector_database(
+    config: Dict[str, Any],
+    logger: Logger,
+    embedding_function: Optional[EmbeddingFunction] = None
+) -> VectorDatabase:
     """
     Get vector database instance
     
@@ -362,8 +413,4 @@ def get_vector_database(config: Dict[str, Any], logger: Logger) -> VectorDatabas
     Returns:
         VectorDatabase instance
     """
-    return VectorDatabase(config, logger)
-
-
-# Import pandas for pd.notna check
-import pandas as pd
+    return VectorDatabase(config, logger, embedding_function)

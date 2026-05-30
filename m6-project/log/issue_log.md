@@ -2,12 +2,23 @@
 
 ## Document Information
 - **Document ID**: LOG-M6-ISSUE-001
-- **Revision**: 1.1
+- **Revision**: 1.2
 - **Status**: ACTIVE
 - **Created**: 2026-05-30
 - **Last Updated**: 2026-05-30
 
 ## Issue Log Entries
+
+### ID: ISSUE-010
+- **Date**: 2026-05-30
+- **Severity**: LOW
+- **Category**: Phase 6 Verification
+- **Description**: Phase 6 end-to-end verification initially exposed local embedding network calls, empty ChromaDB collection, context assembly that dropped oversized retrieved rows, and grouped-query formatting/mapping issues.
+- **Status**: RESOLVED
+- **Resolution**: Enforced local cached embeddings, populated ChromaDB with 11,851 CSV row documents, wired Chroma to the project embedding adapter, condensed prompt context to include multiple retrieved sources, and fixed grouped-query output for Phase 7 strategy testing.
+- **Related Phase**: Phase 6
+
+---
 
 ### ID: ISSUE-008
 - **Date**: 2026-05-30
@@ -78,8 +89,8 @@
 ---
 
 ## Summary Statistics
-- Total Issues: 9
-- Resolved: 7
+- Total Issues: 10
+- Resolved: 8
 - Open: 2
 - Critical: 0
 - High: 0

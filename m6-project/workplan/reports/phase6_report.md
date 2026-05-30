@@ -2,7 +2,7 @@
 
 ## Report Document Information
 - **Document ID**: RP-M6-PHASE6-001
-- **Revision**: 1.0
+- **Revision**: 1.1
 - **Status**: COMPLETED
 - **Created**: 2026-05-30
 - **Phase**: Phase 6 - Web Interface Development
@@ -39,6 +39,14 @@ Verify that Phase 6 deliverables are completed successfully:
 **Execution Date**: 2026-05-30
 **Execution Status**: COMPLETED
 **Overall Result**: SUCCESS
+
+**Final Verification Update (2026-05-30 13:48 UTC+08:00)**:
+- Flask server launched at `http://127.0.0.1:8501`
+- Ollama connection succeeded with `llama3.2:3b`
+- ChromaDB collection `m6_documents` populated with 11,851 CSV row documents
+- `/api/status` returned `{"status":"ready","collection_count":11851,"data_loaded":true}`
+- `/api/query` returned HTTP 200 with generated answer and source records
+- `/api/query` with `grouping_strategy=department` returned grouped answers for CSA and QAQC
 
 ## Test Methodology, Environment, and Tools
 **Environment**:
@@ -151,6 +159,11 @@ Verify that Phase 6 deliverables are completed successfully:
 ### Files Modified:
 - `environment.yml` - Added Flask and flask-cors dependencies
 - `workplan/workplan.md` - updated Phase 6 status to COMPLETED
+- `engine/embeddings.py` - enforced local cached embedding model loading
+- `engine/vector_db.py` - added local Chroma embedding adapter, metadata cleanup, and batch inserts
+- `engine/retriever.py` - fixed grouping strategy name-to-column mapping and grouped result formatting
+- `engine/llm_integration.py` - improved context assembly so retrieved rows are included in prompts
+- `ui/server.py` - processes CSV during initialization and populates empty Chroma collection
 
 ## Recommendations for Future Actions
 1. **Phase 7 Preparation**: Web interface ready for grouping strategy testing

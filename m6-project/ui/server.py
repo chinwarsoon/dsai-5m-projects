@@ -6,6 +6,7 @@ Serves the HTML interface and provides API endpoints for RAG queries
 import sys
 import os
 import json
+import requests
 from pathlib import Path
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
@@ -17,7 +18,7 @@ from engine.logger import Logger
 from engine.csv_loader import CSVLoader
 from engine.grouping import get_grouping_manager
 from engine.embeddings import get_embedding_function
-from engine.vector_db import get_vector_database
+from engine.vector_db import DocumentStore, get_vector_database
 from engine.retriever import get_advanced_retriever
 from engine.llm_integration import get_ollama_llm, get_rag_pipeline
 
@@ -39,6 +40,25 @@ rag_pipeline = None
 CONFIG_PATH = Path(__file__).parent.parent / 'config' / 'm6_config.json'
 DATA_PATH = Path(__file__).parent.parent / 'data' / 'processed_dcc_universal.csv'
 VECTOR_DB_PATH = Path(__file__).parent.parent / 'data' / 'chroma_db'
+
+
+def get_ollama_status():
+    """
+    Return lightweight Ollama availability status for the configured model.
+    """
+    if not llm:
+        return "not_loaded"
+
+    try:
+        response = requests.get(f"{llm.base_url}/api/tags", timeout=2)
+        if response.status_code != 200:
+            return "unavailable"
+
+        models = response.json().get('models', [])
+        model_names = {model.get('name') for model in models}
+        return "available" if llm.model_name in model_names else "model_missing"
+    except Exception:
+        return "unavailable"
 
 
 def initialize_rag_pipeline():
@@ -69,6 +89,7 @@ def initialize_rag_pipeline():
         # Load CSV data
         csv_loader = CSVLoader(config, logger)
         df = csv_loader.load_csv(str(DATA_PATH))
+        df = csv_loader.process_by_priority(df)
         logger.info(f"Loaded CSV with {len(df)} rows", "initialize_rag_pipeline")
         
         # Initialize grouping strategy
@@ -79,15 +100,21 @@ def initialize_rag_pipeline():
         logger.info("Embedding function initialized", "initialize_rag_pipeline")
         
         # Initialize vector database
-        vector_db = get_vector_database(config, logger)
+        vector_db = get_vector_database(config, logger, embedding_function)
         
         # Check if collection exists and has documents
         print("[7/8] Checking vector database collection...")
         collection_count = vector_db.get_collection_count()
         if collection_count == 0:
-            logger.warning("Vector database empty. Please run data loading script first.", "initialize_rag_pipeline")
-            print("      ⚠ Warning: Vector database is empty")
-            print("      → Please run data loading script to populate the database")
+            logger.warning("Vector database empty. Populating from CSV data.", "initialize_rag_pipeline")
+            print("      ⚠ Vector database is empty")
+            print("      → Populating collection from CSV data")
+            document_store = DocumentStore(vector_db, config, logger)
+            row_records = df.to_dict(orient='records')
+            row_ids = [f"row_{idx}" for idx in range(len(row_records))]
+            document_store.store_rows(row_records, row_ids)
+            collection_count = vector_db.get_collection_count()
+            print(f"      ✓ Collection populated with {collection_count} documents")
         else:
             logger.info(f"Vector database has {collection_count} documents", "initialize_rag_pipeline")
             print(f"      ✓ Collection has {collection_count} documents")
@@ -191,14 +218,28 @@ def status():
     """
     Return system status
     """
-    global vector_db, rag_pipeline
+    global vector_db, rag_pipeline, embedding_function, llm
     
     try:
         collection_count = vector_db.get_collection_count() if vector_db else 0
+        embedding_model = getattr(embedding_function, 'model_name', None)
+        llm_model = getattr(llm, 'model_name', None)
+        vector_config = vector_db.vector_db_config if vector_db else {}
+
         return jsonify({
             'status': 'ready' if rag_pipeline else 'not_ready',
             'collection_count': collection_count,
-            'data_loaded': collection_count > 0
+            'data_loaded': collection_count > 0,
+            'embedding_file': DATA_PATH.name,
+            'embedding_file_path': str(DATA_PATH),
+            'embedding_file_status': 'loaded' if DATA_PATH.exists() else 'missing',
+            'query_db': vector_config.get('collection_name', 'not_loaded'),
+            'query_db_path': vector_config.get('persist_directory', str(VECTOR_DB_PATH)),
+            'query_db_status': 'loaded' if collection_count > 0 else 'empty',
+            'embedding_model': embedding_model or 'not_loaded',
+            'embedding_model_status': 'loaded' if embedding_function else 'not_loaded',
+            'explanation_model': llm_model or 'not_loaded',
+            'explanation_model_status': get_ollama_status()
         })
     except Exception as e:
         return jsonify({

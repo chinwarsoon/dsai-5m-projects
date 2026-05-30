@@ -85,6 +85,28 @@
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
+    .dcc-statusbar {
+      gap: 12px;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+    .sb-item {
+      min-width: 0;
+    }
+    .sb-detail {
+      max-width: 220px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .status-ok {
+      color: var(--success);
+    }
+    .status-warn {
+      color: var(--warning);
+    }
+    .status-bad {
+      color: var(--danger);
+    }
   </style>
 </head>
 <body data-theme="dark">
@@ -254,10 +276,29 @@
   <div class="dcc-statusbar" id="statusbar">
     <div class="sb-item">
       <span>📊</span>
-      <span>Ready</span>
+      <span id="runtimeStatus">Loading</span>
     </div>
     <div class="sb-item">
-      <span></span>
+      <span>File</span>
+      <span class="sb-detail" id="statusEmbeddingFile">...</span>
+      <span id="statusEmbeddingFileState" class="status-warn">checking</span>
+    </div>
+    <div class="sb-item">
+      <span>DB</span>
+      <span class="sb-detail" id="statusQueryDb">...</span>
+      <span id="statusQueryDbState" class="status-warn">checking</span>
+    </div>
+    <div class="sb-item">
+      <span>Embed</span>
+      <span class="sb-detail" id="statusEmbeddingModel">...</span>
+      <span id="statusEmbeddingModelState" class="status-warn">checking</span>
+    </div>
+    <div class="sb-item">
+      <span>Explain</span>
+      <span class="sb-detail" id="statusExplanationModel">...</span>
+      <span id="statusExplanationModelState" class="status-warn">checking</span>
+    </div>
+    <div class="sb-item">
       <span id="queryCount">0</span>
       <span>queries</span>
     </div>
@@ -268,6 +309,31 @@
 
   <script>
     // Load system status on page load
+    function setStatusText(id, value) {
+      const element = document.getElementById(id);
+      if (element) {
+        element.textContent = value;
+        element.title = value;
+      }
+    }
+
+    function setState(id, state) {
+      const element = document.getElementById(id);
+      if (!element) return;
+
+      const normalized = String(state || 'unknown');
+      element.textContent = normalized.replace(/_/g, ' ');
+      element.classList.remove('status-ok', 'status-warn', 'status-bad');
+
+      if (['ready', 'loaded', 'available'].includes(normalized)) {
+        element.classList.add('status-ok');
+      } else if (['missing', 'unavailable', 'empty', 'not_loaded', 'model_missing', 'error'].includes(normalized)) {
+        element.classList.add('status-bad');
+      } else {
+        element.classList.add('status-warn');
+      }
+    }
+
     async function loadSystemStatus() {
       console.log('Loading system status...');
       try {
@@ -275,51 +341,33 @@
         const status = await response.json();
         console.log('Status received:', status);
         
-        // Update data information
-        if (status.collection_count !== undefined) {
-          document.getElementById('vectorCount').textContent = `${status.collection_count} documents`;
-          document.getElementById('vectorStatus').textContent = status.collection_count > 0 ? 'Ready' : 'Empty';
-          document.getElementById('vectorStatus').style.color = status.collection_count > 0 ? 'var(--success)' : 'var(--warning)';
-        }
-        
-        // Update LLM status
-        document.getElementById('llmModel').textContent = 'llama3.2:3b';
-        document.getElementById('llmStatus').textContent = status.status === 'ready' ? 'Available' : 'Not Ready';
-        document.getElementById('llmStatus').style.color = status.status === 'ready' ? 'var(--success)' : 'var(--danger)';
-        
-        // Update file info
-        document.getElementById('loadedFile').textContent = 'processed_dcc_universal.csv';
-        document.getElementById('totalRecords').textContent = '13,704';
-        document.getElementById('totalColumns').textContent = '47';
-        
-        // Update status bar - force update
-        const statusFile = document.getElementById('statusFile');
-        const statusModel = document.getElementById('statusModel');
-        const statusVector = document.getElementById('statusVector');
-        
-        console.log('Status file element:', statusFile);
-        console.log('Status model element:', statusModel);
-        console.log('Status vector element:', statusVector);
-        
-        if (statusFile) {
-          statusFile.textContent = 'processed_dcc_universal.csv';
-          statusFile.style.display = 'inline';
-        }
-        if (statusModel) {
-          statusModel.textContent = 'llama3.2:3b';
-          statusModel.style.display = 'inline';
-        }
-        if (statusVector) {
-          statusVector.textContent = status.collection_count > 0 ? `${status.collection_count} docs` : 'Empty';
-          statusVector.style.display = 'inline';
-        }
-        
-        console.log('Status bar updated');
+        setStatusText('runtimeStatus', status.status === 'ready' ? 'Ready' : 'Not ready');
+        setState('runtimeStatus', status.status);
+
+        setStatusText('statusEmbeddingFile', status.embedding_file || 'unknown');
+        setState('statusEmbeddingFileState', status.embedding_file_status);
+
+        const dbLabel = status.query_db
+          ? `${status.query_db} (${status.collection_count || 0} docs)`
+          : 'not loaded';
+        setStatusText('statusQueryDb', dbLabel);
+        setState('statusQueryDbState', status.query_db_status);
+
+        setStatusText('statusEmbeddingModel', status.embedding_model || 'not loaded');
+        setState('statusEmbeddingModelState', status.embedding_model_status);
+
+        setStatusText('statusExplanationModel', status.explanation_model || 'not loaded');
+        setState('statusExplanationModelState', status.explanation_model_status);
+
+        document.getElementById('totalRecords').textContent = (status.collection_count || 0).toLocaleString();
+        document.getElementById('totalColumns').textContent = '45';
+        statusMessage.textContent = 'System status loaded';
         
       } catch (error) {
         console.error('Failed to load system status:', error);
-        document.getElementById('vectorCount').textContent = 'Error';
-        document.getElementById('llmStatus').textContent = 'Error';
+        setStatusText('runtimeStatus', 'Error');
+        setState('runtimeStatus', 'error');
+        statusMessage.textContent = 'Failed to load system status';
       }
     }
     
