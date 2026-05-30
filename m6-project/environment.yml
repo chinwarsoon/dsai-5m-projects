@@ -1,0 +1,34 @@
+name: m6
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10
+  - pip
+  - pandas
+  - numpy
+  - pip:
+    - langchain
+    - langchain-community
+    - langchain-core
+    - chromadb
+    - sentence-transformers
+    - ollama
+    - streamlit
+    - python-dotenv
+    - tiktoken
+    - flask
+    - flask-cors
+
+# Project-specific configuration
+# Project root: /home/franklin/dsai/dsai-5m-projects/m6-project
+# Data folder: data/
+# Config folder: config/
+# Output folder: output/
+# Engine folder: engine/
+# UI folder: ui/
+# Log folder: log/
+# Docs folder: docs/
+# Test folder: test/
+# Archive folder: archive/
+# Workplan folder: workplan/

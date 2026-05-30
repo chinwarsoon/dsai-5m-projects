@@ -1,0 +1,46 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "urn:uuid:m6-grouping-config",
+  "title": "M6 Grouping Configuration",
+  "description": "Configuration for chunk grouping strategies",
+  "type": "object",
+  "properties": {
+    "strategies": {
+      "type": "array",
+      "description": "Available grouping strategies",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Strategy name"
+          },
+          "column": {
+            "type": "string",
+            "description": "Column to group by"
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "Whether strategy is enabled"
+          },
+          "description": {
+            "type": "string",
+            "description": "Strategy description"
+          }
+        },
+        "required": ["name", "column", "enabled"]
+      }
+    },
+    "default_strategy": {
+      "type": "string",
+      "description": "Default strategy to use"
+    },
+    "chunk_size": {
+      "type": "integer",
+      "description": "Chunk size for processing",
+      "default": 100
+    }
+  },
+  "required": ["strategies"],
+  "additionalProperties": false
+}

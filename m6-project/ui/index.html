@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>M6 RAG Agent - Document Submittal Register</title>
+  <link rel="stylesheet" href="dcc-design-system.css">
+  <style>
+    /* Additional styles for M6 RAG Agent */
+    .query-input-area {
+      padding: 16px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+    }
+    .query-textarea {
+      width: 100%;
+      min-height: 80px;
+      padding: 12px;
+      background: var(--surface3);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: var(--font-ui);
+      font-size: 13px;
+      resize: vertical;
+      outline: none;
+    }
+    .query-textarea:focus {
+      border-color: var(--accent-alt);
+    }
+    .results-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+    }
+    .result-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+      margin-bottom: 12px;
+    }
+    .result-answer {
+      font-size: 14px;
+      line-height: 1.6;
+      color: var(--text);
+      margin-bottom: 12px;
+    }
+    .result-sources {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+    }
+    .source-item {
+      font-size: 11px;
+      color: var(--text2);
+      padding: 6px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .source-item:last-child {
+      border-bottom: none;
+    }
+    .source-metadata {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text3);
+      margin-top: 2px;
+    }
+    .loading-indicator {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+      color: var(--text2);
+    }
+    .loading-spinner {
+      width: 24px;
+      height: 24px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-right: 12px;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body data-theme="dark">
+  <!-- Title Bar -->
+  <div class="dcc-titlebar">
+    <div class="dcc-titlebar-logo">
+      <span class="logo-icon">📊</span>
+      <span class="logo-name">M6 RAG Agent</span>
+      <span class="logo-accent">v1.0</span>
+    </div>
+    <div class="dcc-titlebar-breadcrumb">
+      <span>Document Submittal Register</span>
+      <span class="bc-sep">›</span>
+      <span class="bc-active">Query Interface</span>
+    </div>
+    <div class="dcc-titlebar-actions">
+      <div class="theme-picker">
+        <button class="theme-btn" id="themeBtn">
+          <span class="theme-dot" style="background: var(--accent);"></span>
+          <span>Theme</span>
+        </button>
+        <div class="theme-menu" id="themeMenu">
+          <div class="theme-opt active" data-theme="dark">
+            <span class="theme-dot" style="background: #0d1117;"></span>
+            <span>Dark</span>
+          </div>
+          <div class="theme-opt" data-theme="light">
+            <span class="theme-dot" style="background: #f0f4f8;"></span>
+            <span>Light</span>
+          </div>
+          <div class="theme-opt" data-theme="sky">
+            <span class="theme-dot" style="background: #e0f2fe;"></span>
+            <span>Sky</span>
+          </div>
+          <div class="theme-opt" data-theme="ocean">
+            <span class="theme-dot" style="background: #071520;"></span>
+            <span>Ocean</span>
+          </div>
+          <div class="theme-opt" data-theme="presentation">
+            <span class="theme-dot" style="background: #f8fafc;"></span>
+            <span>Presentation</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Shell -->
+  <div class="dcc-shell">
+    <!-- Icon Bar -->
+    <div class="dcc-iconbar">
+      <button class="dcc-iconbar-btn active" id="iconQuery" title="Query">
+        🔍
+      </button>
+      <button class="dcc-iconbar-btn" id="iconFiles" title="Files">
+        📂
+      </button>
+      <button class="dcc-iconbar-btn" id="iconSettings" title="Settings">
+        ⚙️
+      </button>
+      <div class="dcc-iconbar-spacer"></div>
+      <div class="dcc-iconbar-sep"></div>
+      <button class="dcc-iconbar-btn" id="iconHelp" title="Help">
+        ❓
+      </button>
+      <button class="dcc-iconbar-btn" id="iconInfo" title="Info">
+        ℹ️
+      </button>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="dcc-sidebar" id="sidebar">
+      <div class="dcc-sidebar-resizer left-resizer" id="sidebarResizer"></div>
+      <div class="dcc-sidebar-header">
+        <span>PANEL</span>
+      </div>
+      <div class="dcc-sidebar-body">
+        <div class="sb-section" id="queryConfigSection">
+          <div class="sb-section-header">
+            <span>🔍 Query Configuration</span>
+            <span class="sb-section-arrow">▼</span>
+          </div>
+          <div class="sb-section-body">
+            <div class="form-label">Grouping Strategy</div>
+            <select id="groupingStrategy">
+              <option value="none">None</option>
+              <option value="submission_session">Submission Session</option>
+              <option value="document_id">Document ID</option>
+              <option value="department">Department</option>
+              <option value="validation_error">Validation Error</option>
+            </select>
+            <div class="form-label" style="margin-top: 12px;">K Neighbors</div>
+            <input type="number" id="kNeighbors" value="5" min="1" max="20">
+            <div class="form-label" style="margin-top: 12px;">Score Threshold</div>
+            <input type="number" id="scoreThreshold" value="0.0" min="0" max="1" step="0.1">
+          </div>
+        </div>
+        <div class="sb-section" id="dataInfoSection">
+          <div class="sb-section-header">
+            <span>📊 Data Information</span>
+            <span class="sb-section-arrow">▼</span>
+          </div>
+          <div class="sb-section-body">
+            <div class="kpi-card">
+              <div class="kpi-value" id="totalRecords">13,704</div>
+              <div class="kpi-label">Total Records</div>
+              <div class="kpi-sub">CSV rows loaded</div>
+            </div>
+            <div class="kpi-card" style="margin-top: 8px;">
+              <div class="kpi-value" id="totalColumns">47</div>
+              <div class="kpi-label">Columns</div>
+              <div class="kpi-sub">Data columns</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Content Area -->
+    <div class="dcc-content">
+      <div class="panels-container">
+        <!-- Query Input Area -->
+        <div class="query-input-area">
+          <textarea class="query-textarea" id="queryInput" placeholder="Enter your question about the document submittal register..."></textarea>
+          <div style="margin-top: 12px; display: flex; gap: 8px;">
+            <button class="btn btn-primary" id="submitQuery">
+              <span>🔍</span>
+              <span>Submit Query</span>
+            </button>
+            <button class="btn btn-secondary" id="clearQuery">
+              <span>🗑️</span>
+              <span>Clear</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Results Container -->
+        <div class="results-container" id="resultsContainer">
+          <div class="welcome-pane" id="welcomePane">
+            <div class="welcome-icon">🔍</div>
+            <div class="welcome-title">M6 RAG Agent</div>
+            <div class="welcome-sub">
+              Query the document submittal register using natural language. 
+              The system retrieves relevant information using semantic search and generates answers using local LLM.
+            </div>
+            <div class="welcome-steps">
+              <div class="welcome-step">
+                <strong>1</strong>
+                Enter your question
+              </div>
+              <div class="welcome-step">
+                <strong>2</strong>
+                Configure search options
+              </div>
+              <div class="welcome-step">
+                <strong>3</strong>
+                View results with sources
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Status Bar -->
+  <div class="dcc-statusbar" id="statusbar">
+    <div class="sb-item">
+      <span>📊</span>
+      <span>Ready</span>
+    </div>
+    <div class="sb-item">
+      <span></span>
+      <span id="queryCount">0</span>
+      <span>queries</span>
+    </div>
+    <div class="sb-item-right">
+      <span id="statusMessage">System initialized</span>
+    </div>
+  </div>
+
+  <script>
+    // Load system status on page load
+    async function loadSystemStatus() {
+      console.log('Loading system status...');
+      try {
+        const response = await fetch('/api/status');
+        const status = await response.json();
+        console.log('Status received:', status);
+        
+        // Update data information
+        if (status.collection_count !== undefined) {
+          document.getElementById('vectorCount').textContent = `${status.collection_count} documents`;
+          document.getElementById('vectorStatus').textContent = status.collection_count > 0 ? 'Ready' : 'Empty';
+          document.getElementById('vectorStatus').style.color = status.collection_count > 0 ? 'var(--success)' : 'var(--warning)';
+        }
+        
+        // Update LLM status
+        document.getElementById('llmModel').textContent = 'llama3.2:3b';
+        document.getElementById('llmStatus').textContent = status.status === 'ready' ? 'Available' : 'Not Ready';
+        document.getElementById('llmStatus').style.color = status.status === 'ready' ? 'var(--success)' : 'var(--danger)';
+        
+        // Update file info
+        document.getElementById('loadedFile').textContent = 'processed_dcc_universal.csv';
+        document.getElementById('totalRecords').textContent = '13,704';
+        document.getElementById('totalColumns').textContent = '47';
+        
+        // Update status bar - force update
+        const statusFile = document.getElementById('statusFile');
+        const statusModel = document.getElementById('statusModel');
+        const statusVector = document.getElementById('statusVector');
+        
+        console.log('Status file element:', statusFile);
+        console.log('Status model element:', statusModel);
+        console.log('Status vector element:', statusVector);
+        
+        if (statusFile) {
+          statusFile.textContent = 'processed_dcc_universal.csv';
+          statusFile.style.display = 'inline';
+        }
+        if (statusModel) {
+          statusModel.textContent = 'llama3.2:3b';
+          statusModel.style.display = 'inline';
+        }
+        if (statusVector) {
+          statusVector.textContent = status.collection_count > 0 ? `${status.collection_count} docs` : 'Empty';
+          statusVector.style.display = 'inline';
+        }
+        
+        console.log('Status bar updated');
+        
+      } catch (error) {
+        console.error('Failed to load system status:', error);
+        document.getElementById('vectorCount').textContent = 'Error';
+        document.getElementById('llmStatus').textContent = 'Error';
+      }
+    }
+    
+    // Load status on page load with DOM ready check
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', loadSystemStatus);
+    } else {
+      loadSystemStatus();
+    }
+    
+    // Theme Management
+    const themeBtn = document.getElementById('themeBtn');
+    const themeMenu = document.getElementById('themeMenu');
+    const themeOpts = document.querySelectorAll('.theme-opt');
+    
+    // Load saved theme
+    const savedTheme = localStorage.getItem('m6-theme') || 'dark';
+    document.body.setAttribute('data-theme', savedTheme);
+    updateActiveTheme(savedTheme);
+    
+    themeBtn.addEventListener('click', () => {
+      themeMenu.classList.toggle('open');
+    });
+    
+    themeOpts.forEach(opt => {
+      opt.addEventListener('click', () => {
+        const theme = opt.getAttribute('data-theme');
+        document.body.setAttribute('data-theme', theme);
+        localStorage.setItem('m6-theme', theme);
+        updateActiveTheme(theme);
+        themeMenu.classList.remove('open');
+      });
+    });
+    
+    function updateActiveTheme(theme) {
+      themeOpts.forEach(opt => {
+        opt.classList.remove('active');
+        if (opt.getAttribute('data-theme') === theme) {
+          opt.classList.add('active');
+        }
+      });
+    }
+    
+    // Close theme menu when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!themeBtn.contains(e.target) && !themeMenu.contains(e.target)) {
+        themeMenu.classList.remove('open');
+      }
+    });
+    
+    // Sidebar Toggle
+    const iconQuery = document.getElementById('iconQuery');
+    const iconFiles = document.getElementById('iconFiles');
+    const iconSettings = document.getElementById('iconSettings');
+    const iconHelp = document.getElementById('iconHelp');
+    const iconInfo = document.getElementById('iconInfo');
+    const sidebar = document.getElementById('sidebar');
+    
+    iconQuery.addEventListener('click', () => {
+      sidebar.classList.toggle('collapsed');
+      iconQuery.classList.toggle('active');
+    });
+    
+    // Sidebar Section Toggle
+    const queryConfigSection = document.getElementById('queryConfigSection');
+    const dataInfoSection = document.getElementById('dataInfoSection');
+    
+    queryConfigSection.querySelector('.sb-section-header').addEventListener('click', () => {
+      queryConfigSection.classList.toggle('closed');
+    });
+    
+    dataInfoSection.querySelector('.sb-section-header').addEventListener('click', () => {
+      dataInfoSection.classList.toggle('closed');
+    });
+    
+    // Query Submission
+    const submitQuery = document.getElementById('submitQuery');
+    const clearQuery = document.getElementById('clearQuery');
+    const queryInput = document.getElementById('queryInput');
+    const resultsContainer = document.getElementById('resultsContainer');
+    const welcomePane = document.getElementById('welcomePane');
+    const statusbar = document.getElementById('statusbar');
+    const statusMessage = document.getElementById('statusMessage');
+    const queryCount = document.getElementById('queryCount');
+    
+    let queryCounter = 0;
+    
+    submitQuery.addEventListener('click', async () => {
+      const query = queryInput.value.trim();
+      if (!query) {
+        showToast('Please enter a query', 'warning');
+        return;
+      }
+      
+      // Hide welcome pane
+      welcomePane.classList.add('hidden');
+      
+      // Show loading
+      resultsContainer.innerHTML = `
+        <div class="loading-indicator">
+          <div class="loading-spinner"></div>
+          <span>Processing query...</span>
+        </div>
+      `;
+      
+      statusMessage.textContent = 'Processing query...';
+      statusbar.classList.add('status-info');
+      
+      try {
+        // Call Python backend
+        const response = await fetch('/api/query', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            query: query,
+            grouping_strategy: document.getElementById('groupingStrategy').value,
+            k: parseInt(document.getElementById('kNeighbors').value),
+            score_threshold: parseFloat(document.getElementById('scoreThreshold').value)
+          })
+        });
+        
+        const result = await response.json();
+        
+        // Display results
+        displayResults(result);
+        
+        queryCounter++;
+        queryCount.textContent = queryCounter;
+        statusMessage.textContent = 'Query completed';
+        statusbar.classList.remove('status-info');
+        
+      } catch (error) {
+        console.error('Query error:', error);
+        resultsContainer.innerHTML = `
+          <div class="result-card">
+            <div class="result-answer" style="color: var(--danger);">
+              Error: ${error.message}
+            </div>
+          </div>
+        `;
+        statusMessage.textContent = 'Query failed';
+        statusbar.classList.add('status-err');
+      }
+    });
+    
+    clearQuery.addEventListener('click', () => {
+      queryInput.value = '';
+      resultsContainer.innerHTML = '';
+      welcomePane.classList.remove('hidden');
+      statusMessage.textContent = 'Ready';
+      statusbar.classList.remove('status-info', 'status-err');
+    });
+    
+    function displayResults(result) {
+      let html = '';
+      
+      if (result.grouped_answers) {
+        // Grouped results
+        for (const [group, data] of Object.entries(result.grouped_answers)) {
+          html += `
+            <div class="result-card">
+              <div style="margin-bottom: 8px;">
+                <span class="badge badge-accent">${group}</span>
+              </div>
+              <div class="result-answer">${data.answer}</div>
+              <div class="result-sources">
+                <div style="font-size: 10px; color: var(--text3); text-transform: uppercase; margin-bottom: 6px;">Sources</div>
+                ${data.sources.map(source => `
+                  <div class="source-item">
+                    <div>${source.document.substring(0, 100)}...</div>
+                    ${source.metadata ? `
+                      <div class="source-metadata">
+                        ${Object.entries(source.metadata).map(([k, v]) => `${k}: ${v}`).join(' | ')}
+                      </div>
+                    ` : ''}
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          `;
+        }
+      } else {
+        // Single result
+        html += `
+          <div class="result-card">
+            <div class="result-answer">${result.answer}</div>
+            <div class="result-sources">
+              <div style="font-size: 10px; color: var(--text3); text-transform: uppercase; margin-bottom: 6px;">Sources</div>
+              ${result.sources.map(source => `
+                <div class="source-item">
+                  <div>${source.document.substring(0, 100)}...</div>
+                  ${source.metadata ? `
+                    <div class="source-metadata">
+                      ${Object.entries(source.metadata).map(([k, v]) => `${k}: ${v}`).join(' | ')}
+                    </div>
+                  ` : ''}
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }
+      
+      resultsContainer.innerHTML = html;
+    }
+    
+    function showToast(message, type = 'info') {
+      const toast = document.createElement('div');
+      toast.className = 'dcc-toast';
+      toast.textContent = message;
+      toast.style.display = 'block';
+      toast.style.borderColor = `var(--${type})`;
+      document.body.appendChild(toast);
+      
+      setTimeout(() => {
+        toast.style.display = 'none';
+        setTimeout(() => toast.remove(), 250);
+      }, 3000);
+    }
+    
+    // Initialize
+    statusMessage.textContent = 'Ready';
+  </script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+this m6 project is to design a harness agent to:
+- use classic RAG approach
+- use langchain framework
+- use local vector database (chromaDB)
+- use local LLM (llama3) provided from ollama
+- load a csv file
+- row record split per values in one column. allow different chunk sizes to be used for result testing
+- embed row records
+- store in vector database
+- query the vector database
+- return the results
+- built a web interface to interact with the agent

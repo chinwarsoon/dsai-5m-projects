@@ -1,0 +1,392 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "urn:uuid:m6-config-schema",
+  "title": "M6 Project Configuration",
+  "description": "Actual configuration values for M6 RAG Agent project",
+  "type": "object",
+  "allOf": [
+    {
+      "$ref": "m6_setup_schema.json"
+    }
+  ],
+  "properties": {
+    "project_paths": {
+      "project_root": "/home/franklin/dsai/dsai-5m-projects/m6-project",
+      "data_dir": "/home/franklin/dsai/dsai-5m-projects/m6-project/data",
+      "config_dir": "/home/franklin/dsai/dsai-5m-projects/m6-project/config",
+      "output_dir": "/home/franklin/dsai/dsai-5m-projects/m6-project/output",
+      "engine_dir": "/home/franklin/dsai/dsai-5m-projects/m6-project/engine",
+      "ui_dir": "/home/franklin/dsai/dsai-5m-projects/m6-project/ui",
+      "log_dir": "/home/franklin/dsai/dsai-5m-projects/m6-project/log",
+      "docs_dir": "/home/franklin/dsai/dsai-5m-projects/m6-project/docs",
+      "test_dir": "/home/franklin/dsai/dsai-5m-projects/m6-project/test",
+      "archive_dir": "/home/franklin/dsai/dsai-5m-projects/m6-project/archive",
+      "workplan_dir": "/home/franklin/dsai/dsai-5m-projects/m6-project/workplan"
+    },
+    "data_columns": [
+      {
+        "name": "Row_Index",
+        "priority": 2,
+        "nullable": false,
+        "forward_fill": false,
+        "description": "Row index identifier"
+      },
+      {
+        "name": "Transmittal_Number",
+        "priority": 2,
+        "nullable": true,
+        "forward_fill": false,
+        "description": "Transmittal number"
+      },
+      {
+        "name": "Submission_Session",
+        "priority": 1,
+        "nullable": false,
+        "forward_fill": true,
+        "description": "Submission session identifier"
+      },
+      {
+        "name": "Submission_Session_Revision",
+        "priority": 2,
+        "nullable": false,
+        "forward_fill": false,
+        "description": "Submission session revision"
+      },
+      {
+        "name": "Submission_Session_Subject",
+        "priority": 2,
+        "nullable": true,
+        "forward_fill": false,
+        "description": "Submission session subject"
+      },
+      {
+        "name": "Department",
+        "priority": 1,
+        "nullable": true,
+        "forward_fill": true,
+        "description": "Department responsible"
+      },
+      {
+        "name": "Submitted_By",
+        "priority": 2,
+        "nullable": true,
+        "forward_fill": false,
+        "description": "Submitter name"
+      },
+      {
+        "name": "Submission_Date",
+        "priority": 1,
+        "nullable": true,
+        "forward_fill": true,
+        "description": "Submission date"
+      },
+      {
+        "name": "Project_Code",
+        "priority": 1,
+        "nullable": true,
+        "forward_fill": true,
+        "description": "Project code"
+      },
+      {
+        "name": "Facility_Code",
+        "priority": 1,
+        "nullable": true,
+        "forward_fill": true,
+        "description": "Facility code"
+      },
+      {
+        "name": "Document_Type",
+        "priority": 2,
+        "nullable": true,
+        "forward_fill": false,
+        "description": "Document type"
+      },
+      {
+        "name": "Discipline",
+        "priority": 1,
+        "nullable": true,
+        "forward_fill": true,
+        "description": "Discipline"
+      },
+      {
+        "name": "Document_Sequence_Number",
+        "priority": 2,
+        "nullable": true,
+        "forward_fill": false,
+        "description": "Document sequence number"
+      },
+      {
+        "name": "Document_ID",
+        "priority": 2,
+        "nullable": true,
+        "forward_fill": false,
+        "description": "Document identifier"
+      },
+      {
+        "name": "Document_ID_Affixes",
+        "priority": 2,
+        "nullable": true,
+        "forward_fill": false,
+        "description": "Document ID affixes"
+      },
+      {
+        "name": "Document_Revision",
+        "priority": 2,
+        "nullable": true,
+        "forward_fill": false,
+        "description": "Document revision"
+      },
+      {
+        "name": "Reviewer",
+        "priority": 2,
+        "nullable": true,
+        "forward_fill": false,
+        "description": "Reviewer name"
+      },
+      {
+        "name": "Review_Return_Actual_Date",
+        "priority": 2,
+        "nullable": true,
+        "forward_fill": false,
+        "description": "Actual review return date"
+      },
+      {
+        "name": "Review_Return_Plan_Date",
+        "priority": 2,
+        "nullable": true,
+        "forward_fill": false,
+        "description": "Planned review return date"
+      },
+      {
+        "name": "Review_Status",
+        "priority": 2,
+        "nullable": true,
+        "forward_fill": false,
+        "description": "Review status"
+      },
+      {
+        "name": "Review_Status_Code",
+        "priority": 2,
+        "nullable": true,
+        "forward_fill": false,
+        "description": "Review status code"
+      },
+      {
+        "name": "Review_Comments",
+        "priority": 2,
+        "nullable": true,
+        "forward_fill": false,
+        "description": "Review comments"
+      },
+      {
+        "name": "Duration_of_Review",
+        "priority": 3,
+        "nullable": true,
+        "forward_fill": false,
+        "description": "Duration of review (calculated)"
+      },
+      {
+        "name": "Approval_Code",
+        "priority": 2,
+        "nullable": true,
+        "forward_fill": false,
+        "description": "Approval code"
+      },
+      {
+        "name": "First_Submission_Date",
+        "priority": 2,
+        "nullable": true,
+        "forward_fill": false,
+        "description": "First submission date"
+      },
+      {
+        "name": "Latest_Submission_Date",
+        "priority": 2,
+        "nullable": true,
+        "forward_fill": false,
+        "description": "Latest submission date"
+      },
+      {
+        "name": "Latest_Revision",
+        "priority": 3,
+        "nullable": true,
+        "forward_fill": false,
+        "description": "Latest revision (calculated)"
+      },
+      {
+        "name": "All_Submission_Sessions",
+        "priority": 2,
+        "nullable": true,
+        "forward_fill": false,
+        "description": "All submission sessions"
+      },
+      {
+        "name": "All_Submission_Dates",
+        "priority": 2,
+        "nullable": true,
+        "forward_fill": false,
+        "description": "All submission dates"
+      },
+      {
+        "name": "All_Submission_Session_Revisions",
+        "priority": 2,
+        "nullable": true,
+        "forward_fill": false,
+        "description": "All submission session revisions"
+      },
+      {
+        "name": "Count_of_Submissions",
+        "priority": 3,
+        "nullable": true,
+        "forward_fill": false,
+        "description": "Count of submissions (calculated)"
+      },
+      {
+        "name": "Latest_Approval_Status",
+        "priority": 3,
+        "nullable": true,
+        "forward_fill": false,
+        "description": "Latest approval status (calculated)"
+      },
+      {
+        "name": "Latest_Approval_Code",
+        "priority": 3,
+        "nullable": true,
+        "forward_fill": false,
+        "description": "Latest approval code (calculated)"
+      },
+      {
+        "name": "All_Approval_Code",
+        "priority": 2,
+        "nullable": true,
+        "forward_fill": false,
+        "description": "All approval codes"
+      },
+      {
+        "name": "Consolidated_Submission_Session_Subject",
+        "priority": 2,
+        "nullable": true,
+        "forward_fill": false,
+        "description": "Consolidated submission session subject"
+      },
+      {
+        "name": "Submission_Closed",
+        "priority": 3,
+        "nullable": true,
+        "forward_fill": false,
+        "description": "Submission closed status (calculated)"
+      },
+      {
+        "name": "Resubmission_Required",
+        "priority": 3,
+        "nullable": true,
+        "forward_fill": false,
+        "description": "Resubmission required (calculated)"
+      },
+      {
+        "name": "Resubmission_Plan_Date",
+        "priority": 2,
+        "nullable": true,
+        "forward_fill": false,
+        "description": "Resubmission plan date"
+      },
+      {
+        "name": "Resubmission_Forecast_Date",
+        "priority": 2,
+        "nullable": true,
+        "forward_fill": false,
+        "description": "Resubmission forecast date"
+      },
+      {
+        "name": "Resubmission_Overdue_Status",
+        "priority": 3,
+        "nullable": true,
+        "forward_fill": false,
+        "description": "Resubmission overdue status (calculated)"
+      },
+      {
+        "name": "Delay_of_Resubmission",
+        "priority": 3,
+        "nullable": true,
+        "forward_fill": false,
+        "description": "Delay of resubmission (calculated)"
+      },
+      {
+        "name": "Notes",
+        "priority": 2,
+        "nullable": true,
+        "forward_fill": false,
+        "description": "Notes"
+      },
+      {
+        "name": "This_Submission_Approval_Code",
+        "priority": 2,
+        "nullable": true,
+        "forward_fill": false,
+        "description": "This submission approval code"
+      },
+      {
+        "name": "Validation_Errors",
+        "priority": 2,
+        "nullable": true,
+        "forward_fill": false,
+        "description": "Validation errors"
+      },
+      {
+        "name": "Data_Health_Score",
+        "priority": 3,
+        "nullable": true,
+        "forward_fill": false,
+        "description": "Data health score (calculated)"
+      }
+    ],
+    "grouping_strategies": [
+      {
+        "name": "submission_session",
+        "column": "Submission_Session",
+        "enabled": true,
+        "description": "Group records by submission session identifier"
+      },
+      {
+        "name": "document_id",
+        "column": "Document_ID",
+        "enabled": true,
+        "description": "Group records by document identifier"
+      },
+      {
+        "name": "validation_error",
+        "column": "Validation_Errors",
+        "enabled": true,
+        "description": "Group records by validation error types"
+      },
+      {
+        "name": "department",
+        "column": "Department",
+        "enabled": true,
+        "description": "Group records by department"
+      }
+    ],
+    "logging": {
+      "level": 2,
+      "log_to_file": true,
+      "log_file_path": "/home/franklin/dsai/dsai-5m-projects/m6-project/log/application.log",
+      "include_timestamp": true,
+      "include_function_name": true
+    },
+    "llm": {
+      "provider": "ollama",
+      "model": "llama3.2:3b",
+      "endpoint": "http://localhost:11434",
+      "temperature": 0.7,
+      "max_tokens": 2000
+    },
+    "vector_db": {
+      "type": "chromadb",
+      "persist_directory": "/home/franklin/dsai/dsai-5m-projects/m6-project/output/chromadb",
+      "collection_name": "document_submittal_register",
+      "embedding_model": "all-MiniLM-L6-v2"
+    }
+  },
+  "required": ["project_paths", "data_columns", "grouping_strategies", "logging", "llm", "vector_db"],
+  "additionalProperties": false
+}

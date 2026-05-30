@@ -1,0 +1,197 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "urn:uuid:m6-base-schema",
+  "title": "M6 Project Base Schema",
+  "description": "Base schema containing definitions for M6 RAG Agent project",
+  "type": "object",
+  "definitions": {
+    "projectPaths": {
+      "type": "object",
+      "description": "Project directory paths",
+      "properties": {
+        "project_root": {
+          "type": "string",
+          "description": "Root directory of the project"
+        },
+        "data_dir": {
+          "type": "string",
+          "description": "Directory for data input files"
+        },
+        "config_dir": {
+          "type": "string",
+          "description": "Directory for configuration files"
+        },
+        "output_dir": {
+          "type": "string",
+          "description": "Directory for data output files"
+        },
+        "engine_dir": {
+          "type": "string",
+          "description": "Directory for code engines and modules"
+        },
+        "ui_dir": {
+          "type": "string",
+          "description": "Directory for user interface files"
+        },
+        "log_dir": {
+          "type": "string",
+          "description": "Directory for log files"
+        },
+        "docs_dir": {
+          "type": "string",
+          "description": "Directory for documentation"
+        },
+        "test_dir": {
+          "type": "string",
+          "description": "Directory for test files"
+        },
+        "archive_dir": {
+          "type": "string",
+          "description": "Directory for archived files"
+        },
+        "workplan_dir": {
+          "type": "string",
+          "description": "Directory for workplan files"
+        }
+      },
+      "required": ["project_root", "data_dir", "config_dir", "output_dir"],
+      "additionalProperties": false
+    },
+    "dataColumn": {
+      "type": "object",
+      "description": "Data column definition with priority",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Column name"
+        },
+        "priority": {
+          "type": "integer",
+          "description": "Processing priority (1=metadata, 2=relational, 3=derived)",
+          "enum": [1, 2, 3]
+        },
+        "nullable": {
+          "type": "boolean",
+          "description": "Whether column can be null"
+        },
+        "forward_fill": {
+          "type": "boolean",
+          "description": "Whether forward fill is allowed"
+        },
+        "description": {
+          "type": "string",
+          "description": "Column description"
+        }
+      },
+      "required": ["name", "priority"],
+      "additionalProperties": false
+    },
+    "groupingStrategy": {
+      "type": "object",
+      "description": "Chunk grouping strategy configuration",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Strategy name"
+        },
+        "column": {
+          "type": "string",
+          "description": "Column to group by"
+        },
+        "enabled": {
+          "type": "boolean",
+          "description": "Whether strategy is enabled"
+        },
+        "description": {
+          "type": "string",
+          "description": "Strategy description"
+        }
+      },
+      "required": ["name", "column", "enabled"],
+      "additionalProperties": false
+    },
+    "loggingConfig": {
+      "type": "object",
+      "description": "Logging configuration",
+      "properties": {
+        "level": {
+          "type": "integer",
+          "description": "Logging level (0=silent, 1=info, 2=warning, 3=trace)",
+          "enum": [0, 1, 2, 3]
+        },
+        "log_to_file": {
+          "type": "boolean",
+          "description": "Whether to log to file"
+        },
+        "log_file_path": {
+          "type": "string",
+          "description": "Path to log file"
+        },
+        "include_timestamp": {
+          "type": "boolean",
+          "description": "Whether to include timestamp in logs"
+        },
+        "include_function_name": {
+          "type": "boolean",
+          "description": "Whether to include function name in logs"
+        }
+      },
+      "required": ["level"],
+      "additionalProperties": false
+    },
+    "llmConfig": {
+      "type": "object",
+      "description": "LLM configuration",
+      "properties": {
+        "provider": {
+          "type": "string",
+          "description": "LLM provider (e.g., ollama)"
+        },
+        "model": {
+          "type": "string",
+          "description": "Model name (e.g., llama3)"
+        },
+        "endpoint": {
+          "type": "string",
+          "description": "LLM endpoint URL"
+        },
+        "temperature": {
+          "type": "number",
+          "description": "Temperature for generation",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "max_tokens": {
+          "type": "integer",
+          "description": "Maximum tokens to generate"
+        }
+      },
+      "required": ["provider", "model"],
+      "additionalProperties": false
+    },
+    "vectorDbConfig": {
+      "type": "object",
+      "description": "Vector database configuration",
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "Vector database type (e.g., chromadb)"
+        },
+        "persist_directory": {
+          "type": "string",
+          "description": "Directory to persist vector database"
+        },
+        "collection_name": {
+          "type": "string",
+          "description": "Collection name"
+        },
+        "embedding_model": {
+          "type": "string",
+          "description": "Embedding model to use"
+        }
+      },
+      "required": ["type", "persist_directory", "collection_name"],
+      "additionalProperties": false
+    }
+  }
+}

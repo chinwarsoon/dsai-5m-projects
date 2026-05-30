@@ -1,0 +1,126 @@
+{
+  "$schema": "m6_config_schema.json",
+  "project_paths": {
+    "project_root": "/home/franklin/dsai/dsai-5m-projects/m6-project",
+    "data_dir": "/home/franklin/dsai/dsai-5m-projects/m6-project/data",
+    "config_dir": "/home/franklin/dsai/dsai-5m-projects/m6-project/config",
+    "output_dir": "/home/franklin/dsai/dsai-5m-projects/m6-project/output",
+    "engine_dir": "/home/franklin/dsai/dsai-5m-projects/m6-project/engine",
+    "ui_dir": "/home/franklin/dsai/dsai-5m-projects/m6-project/ui",
+    "log_dir": "/home/franklin/dsai/dsai-5m-projects/m6-project/log",
+    "docs_dir": "/home/franklin/dsai/dsai-5m-projects/m6-project/docs",
+    "test_dir": "/home/franklin/dsai/dsai-5m-projects/m6-project/test",
+    "archive_dir": "/home/franklin/dsai/dsai-5m-projects/m6-project/archive",
+    "workplan_dir": "/home/franklin/dsai/dsai-5m-projects/m6-project/workplan"
+  },
+  "data_columns": [
+    {
+      "name": "Row_Index",
+      "priority": 2,
+      "nullable": false,
+      "forward_fill": false,
+      "description": "Row index identifier"
+    },
+    {
+      "name": "Transmittal_Number",
+      "priority": 2,
+      "nullable": true,
+      "forward_fill": false,
+      "description": "Transmittal number"
+    },
+    {
+      "name": "Submission_Session",
+      "priority": 1,
+      "nullable": false,
+      "forward_fill": true,
+      "description": "Submission session identifier"
+    },
+    {
+      "name": "Submission_Session_Revision",
+      "priority": 2,
+      "nullable": true,
+      "forward_fill": false,
+      "description": "Submission session revision"
+    },
+    {
+      "name": "Document_ID",
+      "priority": 2,
+      "nullable": false,
+      "forward_fill": false,
+      "description": "Document identifier"
+    },
+    {
+      "name": "Document_Revision",
+      "priority": 2,
+      "nullable": true,
+      "forward_fill": false,
+      "description": "Document revision"
+    },
+    {
+      "name": "Department",
+      "priority": 1,
+      "nullable": false,
+      "forward_fill": true,
+      "description": "Department responsible"
+    },
+    {
+      "name": "Review_Status",
+      "priority": 2,
+      "nullable": true,
+      "forward_fill": false,
+      "description": "Review status"
+    },
+    {
+      "name": "Validation_Errors",
+      "priority": 3,
+      "nullable": true,
+      "forward_fill": false,
+      "description": "Validation errors"
+    }
+  ],
+  "grouping_strategies": [
+    {
+      "name": "submission_session",
+      "column": "Submission_Session",
+      "description": "Group by submission session"
+    },
+    {
+      "name": "document_id",
+      "column": "Document_ID",
+      "description": "Group by document ID"
+    },
+    {
+      "name": "department",
+      "column": "Department",
+      "description": "Group by department"
+    },
+    {
+      "name": "validation_error",
+      "column": "Validation_Errors",
+      "description": "Group by validation error"
+    }
+  ],
+  "logging": {
+    "level": 2,
+    "enable_file_logging": true,
+    "log_file_path": "/home/franklin/dsai/dsai-5m-projects/m6-project/log/m6.log"
+  },
+  "llm": {
+    "base_url": "http://localhost:11434",
+    "model": "llama3.2:3b",
+    "temperature": 0.7,
+    "max_tokens": 2000
+  },
+  "rag": {
+    "top_k": 5,
+    "score_threshold": 0.0
+  },
+  "vector_db": {
+    "collection_name": "m6_documents",
+    "persist_directory": "/home/franklin/dsai/dsai-5m-projects/m6-project/data/chroma_db"
+  },
+  "embeddings": {
+    "model_name": "all-MiniLM-L6-v2",
+    "device": "cpu"
+  }
+}

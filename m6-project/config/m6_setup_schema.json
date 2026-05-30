@@ -1,0 +1,42 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "urn:uuid:m6-setup-schema",
+  "title": "M6 Project Setup Schema",
+  "description": "Setup schema containing properties for M6 RAG Agent project",
+  "type": "object",
+  "allOf": [
+    {
+      "$ref": "m6_base_schema.json#/definitions/projectPaths"
+    }
+  ],
+  "properties": {
+    "project_paths": {
+      "$ref": "m6_base_schema.json#/definitions/projectPaths"
+    },
+    "data_columns": {
+      "type": "array",
+      "description": "Data column definitions with priorities",
+      "items": {
+        "$ref": "m6_base_schema.json#/definitions/dataColumn"
+      }
+    },
+    "grouping_strategies": {
+      "type": "array",
+      "description": "Available chunk grouping strategies",
+      "items": {
+        "$ref": "m6_base_schema.json#/definitions/groupingStrategy"
+      }
+    },
+    "logging": {
+      "$ref": "m6_base_schema.json#/definitions/loggingConfig"
+    },
+    "llm": {
+      "$ref": "m6_base_schema.json#/definitions/llmConfig"
+    },
+    "vector_db": {
+      "$ref": "m6_base_schema.json#/definitions/vectorDbConfig"
+    }
+  },
+  "required": ["project_paths", "data_columns", "grouping_strategies", "logging", "llm", "vector_db"],
+  "additionalProperties": false
+}
