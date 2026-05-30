@@ -198,6 +198,9 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 
+# Large database and local files
+m6-project/data/chroma_db/
+
 # Cursor
 #  Cursor is an AI-powered code editor. `.cursorignore` specifies files/directories to
 #  exclude from AI features like autocomplete and code analysis. Recommended for sensitive data
@@ -209,3 +212,6 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# data
+data/chorma_db
