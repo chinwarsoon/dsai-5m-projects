@@ -203,6 +203,7 @@ class OllamaLLM:
 class RAGPipeline:
     """
     RAG Pipeline combining retrieval and generation
+    Supports configurable chunking strategies with automatic selection based on data source
     """
     
     def __init__(
@@ -231,8 +232,100 @@ class RAGPipeline:
         self.top_k = self.rag_config.get('top_k', 5)
         self.score_threshold = self.rag_config.get('score_threshold', 0.0)
         
-        self.logger.info("RAG pipeline initialized", "RAGPipeline.__init__")
+        # Initialize chunking strategy
+        self.chunking_config = config.get('chunking', {})
+        self.data_source_config = config.get('data_source', {})
+        self.selected_chunking_strategy = self._select_chunking_strategy()
+        
+        self.logger.info(
+            f"RAG pipeline initialized with chunking strategy: {self.selected_chunking_strategy}",
+            "RAGPipeline.__init__"
+        )
+        self.logger.add_trace_entry(
+            "selected_chunking_strategy",
+            self.selected_chunking_strategy,
+            "rag_initialization",
+            "success"
+        )
+        
         self.logger.exit_function("RAGPipeline.__init__")
+    
+    def _select_chunking_strategy(self) -> str:
+        """
+        Automatically select chunking strategy based on data source
+        
+        Strategy:
+        1. If auto_select_strategy is enabled, detect data source type
+        2. For CSV sources, use structured chunking (optimal for tabular data)
+        3. For other sources, use default strategy
+        4. Allow override via explicit configuration
+        
+        Returns:
+            Selected chunking strategy name
+        """
+        self.logger.enter_function("RAGPipeline._select_chunking_strategy")
+        
+        # Check if auto-selection is enabled
+        auto_select = self.chunking_config.get('auto_select_strategy', True)
+        if not auto_select:
+            default_strategy = self.chunking_config.get('default_strategy', 'row_level')
+            self.logger.info(
+                f"Auto-selection disabled, using default strategy: {default_strategy}",
+                "RAGPipeline._select_chunking_strategy"
+            )
+            self.logger.exit_function("RAGPipeline._select_chunking_strategy")
+            return default_strategy
+        
+        # Detect data source type
+        data_source_type = self.data_source_config.get('type', 'unknown')
+        self.logger.info(
+            f"Detected data source type: {data_source_type}",
+            "RAGPipeline._select_chunking_strategy"
+        )
+        
+        # Select strategy based on data source
+        if data_source_type == 'csv':
+            strategy = self.chunking_config.get('strategy_for_csv', 'structured')
+            self.logger.info(
+                f"CSV data source detected - selecting structured chunking strategy: {strategy}",
+                "RAGPipeline._select_chunking_strategy"
+            )
+        else:
+            strategy = self.chunking_config.get('default_strategy', 'row_level')
+            self.logger.info(
+                f"Using default strategy for {data_source_type}: {strategy}",
+                "RAGPipeline._select_chunking_strategy"
+            )
+        
+        self.logger.add_trace_entry(
+            "strategy_selection_logic",
+            f"data_source={data_source_type} -> strategy={strategy}",
+            "chunking_strategy_selection",
+            "success"
+        )
+        
+        self.logger.exit_function("RAGPipeline._select_chunking_strategy")
+        return strategy
+    
+    def get_chunking_strategy(self) -> str:
+        """
+        Get the currently selected chunking strategy
+        
+        Returns:
+            Name of selected chunking strategy
+        """
+        return self.selected_chunking_strategy
+    
+    def get_chunking_config(self) -> Dict[str, Any]:
+        """
+        Get the configuration for the selected chunking strategy
+        
+        Returns:
+            Configuration dictionary for selected strategy
+        """
+        strategy_name = self.selected_chunking_strategy
+        strategies = self.chunking_config.get('strategies', {})
+        return strategies.get(strategy_name, {})
     
     def assemble_context(
         self,
@@ -346,7 +439,8 @@ Answer:"""
         k: Optional[int] = None,
         score_threshold: Optional[float] = None,
         where: Optional[Dict[str, Any]] = None,
-        prompt_template: Optional[str] = None
+        prompt_template: Optional[str] = None,
+        chunking_strategy: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Execute RAG query
@@ -357,6 +451,7 @@ Answer:"""
             score_threshold: Minimum similarity score
             where: Metadata filter conditions
             prompt_template: Custom prompt template
+            chunking_strategy: Chunking strategy for retrieval awareness
             
         Returns:
             Dictionary with answer, context, and sources
@@ -368,13 +463,22 @@ Answer:"""
         k = k if k is not None else self.top_k
         score_threshold = score_threshold if score_threshold is not None else self.score_threshold
         
-        # Retrieve relevant documents
-        retrieved_results = self.retriever.query(
-            query_text=user_query,
-            k=k,
-            score_threshold=score_threshold,
-            where=where
-        )
+        # Retrieve relevant documents - use chunking-aware retrieval if available
+        if chunking_strategy and hasattr(self.retriever, 'query_with_chunking'):
+            retrieved_results = self.retriever.query_with_chunking(
+                query_text=user_query,
+                k=k,
+                score_threshold=score_threshold,
+                where=where,
+                chunking_strategy=chunking_strategy
+            )
+        else:
+            retrieved_results = self.retriever.query(
+                query_text=user_query,
+                k=k,
+                score_threshold=score_threshold,
+                where=where
+            )
         
         # Format results
         formatted_results = self.retriever.format_results(retrieved_results)

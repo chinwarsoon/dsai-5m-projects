@@ -88,11 +88,22 @@
 
 ---
 
+### ID: ISSUE-011
+- **Date**: 2026-05-30
+- **Severity**: MEDIUM
+- **Category**: Phase 3.5/4 Remaining Actions
+- **Description**: Missing chunking strategy module (engine/chunking.py), no structured chunk hierarchy support in retriever, no chunk aggregation, broken `assemble_context` method signature (missing `def` keyword) in llm_integration.py
+- **Status**: RESOLVED
+- **Resolution**: Created engine/chunking.py with RowLevelChunking, StructuredChunking, SemanticChunking strategies and ChunkingManager; added chunking support to CSVLoader; added structured chunk storage and related chunk retrieval to DocumentStore; implemented chunk aggregation and deduplication in AdvancedRetriever with query_with_chunking(); fixed missing `def` in assemble_context; added chunking_strategy parameter to RAGPipeline.query(); wired chunking strategy display into UI and /api/status endpoint
+- **Related Phase**: Phase 3.5, Phase 4
+
+---
+
 ## Summary Statistics
-- Total Issues: 10
-- Resolved: 8
+- Total Issues: 11
+- Resolved: 9
 - Open: 2
 - Critical: 0
 - High: 0
-- Medium: 0
+- Medium: 1
 - Low: 7

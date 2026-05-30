@@ -139,7 +139,71 @@
 
 ---
 
+### ID: UPDATE-011
+- **Date**: 2026-05-30
+- **Time**: 14:20 UTC+08:00
+- **Category**: Phase 3.5/4 Remaining Actions Completion
+- **Description**: Completed pending Phase 3.5 Extended and Phase 4 NEW items before Phase 7
+- **Changes Made**:
+  - Created `engine/chunking.py` with:
+    - ChunkingStrategy base class, RowLevelChunking, StructuredChunking, SemanticChunking
+    - ChunkingManager with strategy factory and automatic selection
+    - Column group aware structured chunking per config column_groups
+  - Updated `engine/csv_loader.py`:
+    - Added `chunk_data()` method that uses ChunkingManager
+    - Supports all chunking strategies via strategy name parameter
+  - Updated `engine/vector_db.py` DocumentStore:
+    - Added `store_structured_chunks()` for batch chunk storage
+    - Added `get_related_chunks()` for parent-row based retrieval
+  - Updated `engine/retriever.py` AdvancedRetriever:
+    - Added `set_chunking_strategy()` method
+    - Added `query_with_chunking()` for chunking-aware retrieval
+    - Added `_aggregate_structured_chunks()` to combine related structured chunks
+    - Added `_deduplicate_by_parent_row()` to keep best scoring chunk per row
+  - Fixed `engine/llm_integration.py` RAGPipeline:
+    - Fixed broken `assemble_context` method signature (missing `def` keyword)
+    - Added `chunking_strategy` parameter to `query()` method
+    - Propagates chunking strategy to retriever's query_with_chunking()
+  - Updated `ui/index.html`:
+    - Added chunking strategy display in status bar
+    - Added chunking strategy info in sidebar configuration panel
+    - JS loads chunking strategy from /api/status
+  - Updated `ui/server.py`:
+    - Added chunking_strategy to /api/status response
+    - Added chunking_strategy parameter to /api/query handler
+    - Routes chunking strategy to retriever and RAG pipeline
+- **Impact**: All Phase 3.5 and Phase 4 pending items resolved. System ready for Phase 7 testing and optimization.
+- **Related Phase**: Phase 3.5, Phase 4
+- **Status**: COMPLETED
+
+---
+
+### ID: UPDATE-012
+- **Date**: 2026-05-30
+- **Time**: 14:40 UTC+08:00
+- **Category**: File Upload and Async DB Rebuild
+- **Description**: Added file upload and async vector database rebuild with progress modal
+- **Changes Made**:
+  - Added `POST /api/upload` endpoint — accepts CSV via multipart/form-data, saves to data/
+  - Rewrote `POST /api/rebuild` for async execution — returns task_id, runs in daemon thread
+  - Added `GET /api/rebuild-status/<task_id>` endpoint — returns progress %, steps[], current_step, collection_count
+  - Background rebuild thread (`_run_rebuild`) reports progress through each phase:
+    - Config loading → CSV loading (rows) → embedding init → vector DB connect
+    - Chunking (count) → storage → RAG pipeline reinit
+  - Added progress modal to UI with:
+    - File name and chunking strategy display
+    - Animated progress bar
+    - Scrollable step-by-step log (○ running / ✓ completed / ✗ error)
+    - Close button on completion with auto status refresh
+  - Data Management sidebar section with file picker, Upload, and Rebuild DB buttons
+  - 📂 icon bar button toggles Data Management section
+- **Impact**: Users can upload custom CSV files and rebuild the vector database from the UI with full progress visibility
+- **Related Phase**: Phase 6 Enhancement (pre-Phase 7)
+- **Status**: COMPLETED
+
+---
+
 ## Summary Statistics
-- Total Updates: 10
-- Completed: 10
+- Total Updates: 12
+- Completed: 12
 - In Progress: 0

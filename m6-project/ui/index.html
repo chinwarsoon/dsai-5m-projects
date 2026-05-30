@@ -107,6 +107,33 @@
     .status-bad {
       color: var(--danger);
     }
+    .btn-small {
+      padding: 4px 10px;
+      font-size: 11px;
+    }
+    .btn-small span {
+      font-size: 11px;
+    }
+    .rebuild-progress {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px;
+      background: var(--surface3);
+      border-radius: var(--radius);
+      font-size: 11px;
+      color: var(--text2);
+      margin-top: 8px;
+    }
+    .rebuild-progress .spinner-small {
+      width: 14px;
+      height: 14px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      flex-shrink: 0;
+    }
   </style>
 </head>
 <body data-theme="dark">
@@ -189,20 +216,22 @@
             <span>🔍 Query Configuration</span>
             <span class="sb-section-arrow">▼</span>
           </div>
-          <div class="sb-section-body">
-            <div class="form-label">Grouping Strategy</div>
-            <select id="groupingStrategy">
-              <option value="none">None</option>
-              <option value="submission_session">Submission Session</option>
-              <option value="document_id">Document ID</option>
-              <option value="department">Department</option>
-              <option value="validation_error">Validation Error</option>
-            </select>
-            <div class="form-label" style="margin-top: 12px;">K Neighbors</div>
-            <input type="number" id="kNeighbors" value="5" min="1" max="20">
-            <div class="form-label" style="margin-top: 12px;">Score Threshold</div>
-            <input type="number" id="scoreThreshold" value="0.0" min="0" max="1" step="0.1">
-          </div>
+            <div class="sb-section-body">
+              <div class="form-label">Grouping Strategy</div>
+              <select id="groupingStrategy">
+                <option value="none">None</option>
+                <option value="submission_session">Submission Session</option>
+                <option value="document_id">Document ID</option>
+                <option value="department">Department</option>
+                <option value="validation_error">Validation Error</option>
+              </select>
+              <div class="form-label" style="margin-top: 12px;">Chunking Strategy</div>
+              <div id="chunkingStrategyDisplay" style="padding: 6px 10px; background: var(--surface3); border-radius: var(--radius); font-size: 12px; color: var(--accent);">Loading...</div>
+              <div class="form-label" style="margin-top: 12px;">K Neighbors</div>
+              <input type="number" id="kNeighbors" value="5" min="1" max="20">
+              <div class="form-label" style="margin-top: 12px;">Score Threshold</div>
+              <input type="number" id="scoreThreshold" value="0.0" min="0" max="1" step="0.1">
+            </div>
         </div>
         <div class="sb-section" id="dataInfoSection">
           <div class="sb-section-header">
@@ -220,6 +249,27 @@
               <div class="kpi-label">Columns</div>
               <div class="kpi-sub">Data columns</div>
             </div>
+          </div>
+        </div>
+        <div class="sb-section" id="dataManagementSection">
+          <div class="sb-section-header">
+            <span>📂 Data Management</span>
+            <span class="sb-section-arrow">▼</span>
+          </div>
+          <div class="sb-section-body">
+            <div class="form-label">Upload CSV</div>
+            <input type="file" id="fileInput" accept=".csv" style="width:100%;padding:4px 0;font-size:12px;color:var(--text2);">
+            <div style="margin-top:8px;display:flex;gap:6px;">
+              <button class="btn btn-primary btn-small" id="uploadBtn">
+                <span>📤</span>
+                <span>Upload</span>
+              </button>
+              <button class="btn btn-secondary btn-small" id="rebuildBtn">
+                <span>🔄</span>
+                <span>Rebuild DB</span>
+              </button>
+            </div>
+            <div id="uploadStatus" style="margin-top:8px;font-size:11px;color:var(--text3);"></div>
           </div>
         </div>
       </div>
@@ -299,6 +349,11 @@
       <span id="statusExplanationModelState" class="status-warn">checking</span>
     </div>
     <div class="sb-item">
+      <span>Chunk</span>
+      <span class="sb-detail" id="statusChunkingStrategy">...</span>
+      <span id="statusChunkingStrategyState" class="status-warn">checking</span>
+    </div>
+    <div class="sb-item">
       <span id="queryCount">0</span>
       <span>queries</span>
     </div>
@@ -358,6 +413,11 @@
 
         setStatusText('statusExplanationModel', status.explanation_model || 'not loaded');
         setState('statusExplanationModelState', status.explanation_model_status);
+
+        const chunkingStrategy = status.chunking_strategy || 'row_level';
+        setStatusText('statusChunkingStrategy', chunkingStrategy);
+        setState('statusChunkingStrategyState', 'loaded');
+        document.getElementById('chunkingStrategyDisplay').textContent = chunkingStrategy;
 
         document.getElementById('totalRecords').textContent = (status.collection_count || 0).toLocaleString();
         document.getElementById('totalColumns').textContent = '45';
@@ -431,9 +491,21 @@
       iconQuery.classList.toggle('active');
     });
     
+    iconFiles.addEventListener('click', () => {
+      sidebar.classList.remove('collapsed');
+      iconFiles.classList.toggle('active');
+      iconQuery.classList.remove('active');
+      dataManagementSection.classList.toggle('closed');
+      const isOpen = !dataManagementSection.classList.contains('closed');
+      if (isOpen) {
+        dataManagementSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+
     // Sidebar Section Toggle
     const queryConfigSection = document.getElementById('queryConfigSection');
     const dataInfoSection = document.getElementById('dataInfoSection');
+    const dataManagementSection = document.getElementById('dataManagementSection');
     
     queryConfigSection.querySelector('.sb-section-header').addEventListener('click', () => {
       queryConfigSection.classList.toggle('closed');
@@ -441,6 +513,10 @@
     
     dataInfoSection.querySelector('.sb-section-header').addEventListener('click', () => {
       dataInfoSection.classList.toggle('closed');
+    });
+    
+    dataManagementSection.querySelector('.sb-section-header').addEventListener('click', () => {
+      dataManagementSection.classList.toggle('closed');
     });
     
     // Query Submission
@@ -523,51 +599,194 @@
       statusbar.classList.remove('status-info', 'status-err');
     });
     
+    // File Upload
+    const fileInput = document.getElementById('fileInput');
+    const uploadBtn = document.getElementById('uploadBtn');
+    const rebuildBtn = document.getElementById('rebuildBtn');
+    const uploadStatus = document.getElementById('uploadStatus');
+    
+    uploadBtn.addEventListener('click', async () => {
+      const file = fileInput.files[0];
+      if (!file) {
+        showToast('Please select a CSV file first', 'warning');
+        return;
+      }
+      
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      uploadStatus.innerHTML = `<div class="rebuild-progress"><div class="spinner-small"></div><span>Uploading ${file.name}...</span></div>`;
+      statusMessage.textContent = 'Uploading file...';
+      
+      try {
+        const response = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData
+        });
+        const result = await response.json();
+        
+        if (result.success) {
+          uploadStatus.innerHTML = `<span style="color:var(--success);">✓ ${result.message}</span>`;
+          showToast(`File "${result.filename}" uploaded`, 'success');
+          statusMessage.textContent = `Uploaded ${result.filename}`;
+        } else {
+          uploadStatus.innerHTML = `<span style="color:var(--danger);">✗ ${result.error}</span>`;
+          showToast('Upload failed: ' + result.error, 'warning');
+        }
+      } catch (error) {
+        uploadStatus.innerHTML = `<span style="color:var(--danger);">✗ Upload error: ${error.message}</span>`;
+        showToast('Upload failed', 'warning');
+      }
+    });
+    
+    const rebuildModal = document.getElementById('rebuildModal');
+    const rebuildModalBody = document.getElementById('rebuildModalBody');
+    const rebuildModalFooter = document.getElementById('rebuildModalFooter');
+    const rebuildCloseBtn = document.getElementById('rebuildCloseBtn');
+    const rebuildFile = document.getElementById('rebuildFile');
+    const rebuildChunking = document.getElementById('rebuildChunking');
+    const rebuildProgressBar = document.getElementById('rebuildProgressBar');
+    const rebuildProgressText = document.getElementById('rebuildProgressText');
+    const rebuildSteps = document.getElementById('rebuildSteps');
+
+    rebuildCloseBtn.addEventListener('click', () => {
+      rebuildModal.style.display = 'none';
+      loadSystemStatus();
+    });
+
+    rebuildBtn.addEventListener('click', async () => {
+      const file = fileInput.files[0];
+      const filename = file ? file.name : 'processed_dcc_universal.csv';
+      
+      if (!confirm(`Rebuild vector database from "${filename}"?\nExisting data will be deleted.`)) {
+        return;
+      }
+      
+      const chunkingStrategy = document.getElementById('groupingStrategy').value === 'none'
+        ? 'structured'
+        : 'row_level';
+
+      rebuildFile.textContent = filename;
+      rebuildChunking.textContent = chunkingStrategy;
+      rebuildProgressBar.style.width = '0%';
+      rebuildProgressText.textContent = 'Starting rebuild...';
+      rebuildSteps.innerHTML = '';
+      rebuildModalFooter.style.display = 'none';
+      rebuildModal.style.display = 'flex';
+
+      try {
+        const resp = await fetch('/api/rebuild', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            filename: filename,
+            chunking_strategy: chunkingStrategy
+          })
+        });
+        const task = await resp.json();
+
+        if (!task.task_id) {
+          rebuildSteps.innerHTML = `<div class="rebuild-step error"><span class="rebuild-step-icon">✗</span><span class="rebuild-step-name">${task.error || 'Failed to start rebuild'}</span></div>`;
+          rebuildModalFooter.style.display = 'flex';
+          return;
+        }
+
+        const poll = setInterval(async () => {
+          try {
+            const statusResp = await fetch(`/api/rebuild-status/${task.task_id}`);
+            const status = await statusResp.json();
+
+            rebuildProgressBar.style.width = status.progress + '%';
+            rebuildProgressText.textContent = status.current_step || 'Running...';
+
+            if (status.steps) {
+              rebuildSteps.innerHTML = status.steps.map(s => {
+                const icon = s.status === 'completed' ? '✓' : s.status === 'error' ? '✗' : '○';
+                const cls = s.status === 'completed' ? 'completed' : s.status === 'error' ? 'error' : 'running';
+                return `<div class="rebuild-step ${cls}">
+                  <span class="rebuild-step-icon">${icon}</span>
+                  <div>
+                    <div class="rebuild-step-name">${s.name}</div>
+                    ${s.detail ? `<div class="rebuild-step-detail">${s.detail}</div>` : ''}
+                  </div>
+                </div>`;
+              }).join('');
+              rebuildSteps.scrollTop = rebuildSteps.scrollHeight;
+            }
+
+            if (status.status === 'completed') {
+              clearInterval(poll);
+              rebuildProgressText.textContent = `✓ Complete: ${status.collection_count || 0} documents`;
+              rebuildModalFooter.style.display = 'flex';
+              uploadStatus.innerHTML = `<span style="color:var(--success);">✓ DB rebuilt: ${status.collection_count || 0} documents</span>`;
+              statusMessage.textContent = `DB rebuilt: ${status.collection_count || 0} documents`;
+              loadSystemStatus();
+            } else if (status.status === 'error') {
+              clearInterval(poll);
+              rebuildProgressText.textContent = `✗ Failed: ${status.error || 'Unknown error'}`;
+              rebuildModalFooter.style.display = 'flex';
+              uploadStatus.innerHTML = `<span style="color:var(--danger);">✗ Rebuild failed</span>`;
+            }
+          } catch (e) {
+            clearInterval(poll);
+            rebuildProgressText.textContent = `✗ Poll error: ${e.message}`;
+            rebuildModalFooter.style.display = 'flex';
+          }
+        }, 800);
+
+      } catch (error) {
+        rebuildSteps.innerHTML = `<div class="rebuild-step error"><span class="rebuild-step-icon">✗</span><span class="rebuild-step-name">Error: ${error.message}</span></div>`;
+        rebuildModalFooter.style.display = 'flex';
+      }
+    });
+    
     function displayResults(result) {
       let html = '';
       
       if (result.grouped_answers) {
         // Grouped results
         for (const [group, data] of Object.entries(result.grouped_answers)) {
+          const sources = data.sources || [];
           html += `
             <div class="result-card">
               <div style="margin-bottom: 8px;">
                 <span class="badge badge-accent">${group}</span>
               </div>
-              <div class="result-answer">${data.answer}</div>
+              <div class="result-answer">${data.answer || 'No answer generated'}</div>
               <div class="result-sources">
                 <div style="font-size: 10px; color: var(--text3); text-transform: uppercase; margin-bottom: 6px;">Sources</div>
-                ${data.sources.map(source => `
+                ${sources.length > 0 ? sources.map(source => `
                   <div class="source-item">
-                    <div>${source.document.substring(0, 100)}...</div>
+                    <div>${source.document ? source.document.substring(0, 100) : 'No document'}...</div>
                     ${source.metadata ? `
                       <div class="source-metadata">
                         ${Object.entries(source.metadata).map(([k, v]) => `${k}: ${v}`).join(' | ')}
                       </div>
                     ` : ''}
                   </div>
-                `).join('')}
+                `).join('') : '<div class="source-item" style="color: var(--text3);">No sources found</div>'}
               </div>
             </div>
           `;
         }
       } else {
         // Single result
+        const sources = result.sources || [];
         html += `
           <div class="result-card">
-            <div class="result-answer">${result.answer}</div>
+            <div class="result-answer">${result.answer || 'No answer generated'}</div>
             <div class="result-sources">
               <div style="font-size: 10px; color: var(--text3); text-transform: uppercase; margin-bottom: 6px;">Sources</div>
-              ${result.sources.map(source => `
+              ${sources.length > 0 ? sources.map(source => `
                 <div class="source-item">
-                  <div>${source.document.substring(0, 100)}...</div>
+                  <div>${source.document ? source.document.substring(0, 100) : 'No document'}...</div>
                   ${source.metadata ? `
                     <div class="source-metadata">
                       ${Object.entries(source.metadata).map(([k, v]) => `${k}: ${v}`).join(' | ')}
                     </div>
                   ` : ''}
                 </div>
-              `).join('')}
+              `).join('') : '<div class="source-item" style="color: var(--text3);">No sources found</div>'}
             </div>
           </div>
         `;
@@ -593,5 +812,152 @@
     // Initialize
     statusMessage.textContent = 'Ready';
   </script>
+
+  <!-- Rebuild Progress Modal -->
+  <div class="modal-overlay" id="rebuildModal" style="display:none;">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <span>🔄 Rebuilding Vector Database</span>
+      </div>
+      <div class="modal-body" id="rebuildModalBody">
+        <div class="rebuild-info">
+          <div class="rebuild-info-row">
+            <span class="rebuild-info-label">File:</span>
+            <span class="rebuild-info-value" id="rebuildFile">-</span>
+          </div>
+          <div class="rebuild-info-row">
+            <span class="rebuild-info-label">Chunking:</span>
+            <span class="rebuild-info-value" id="rebuildChunking">-</span>
+          </div>
+        </div>
+        <div class="rebuild-progress-bar-container">
+          <div class="rebuild-progress-bar" id="rebuildProgressBar"></div>
+        </div>
+        <div class="rebuild-progress-text" id="rebuildProgressText">Starting...</div>
+        <div class="rebuild-steps" id="rebuildSteps"></div>
+      </div>
+      <div class="modal-footer" id="rebuildModalFooter" style="display:none;">
+        <button class="btn btn-primary" id="rebuildCloseBtn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    .modal-dialog {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      width: 520px;
+      max-width: 90vw;
+      max-height: 80vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    }
+    .modal-header {
+      padding: 14px 18px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      border-bottom: 1px solid var(--border);
+      background: var(--surface2);
+      border-radius: var(--radius) var(--radius) 0 0;
+    }
+    .modal-body {
+      padding: 18px;
+      overflow-y: auto;
+      flex: 1;
+    }
+    .modal-footer {
+      padding: 12px 18px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: flex-end;
+    }
+    .rebuild-info {
+      margin-bottom: 14px;
+      font-size: 12px;
+    }
+    .rebuild-info-row {
+      display: flex;
+      gap: 8px;
+      padding: 3px 0;
+    }
+    .rebuild-info-label {
+      color: var(--text3);
+      min-width: 72px;
+    }
+    .rebuild-info-value {
+      color: var(--text);
+      font-family: var(--font-mono);
+    }
+    .rebuild-progress-bar-container {
+      width: 100%;
+      height: 8px;
+      background: var(--surface3);
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 8px;
+    }
+    .rebuild-progress-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--accent), var(--accent-alt));
+      border-radius: 4px;
+      transition: width 0.4s ease;
+    }
+    .rebuild-progress-text {
+      font-size: 12px;
+      color: var(--text2);
+      margin-bottom: 12px;
+    }
+    .rebuild-steps {
+      max-height: 240px;
+      overflow-y: auto;
+      font-size: 11px;
+    }
+    .rebuild-step {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 5px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .rebuild-step:last-child {
+      border-bottom: none;
+    }
+    .rebuild-step-icon {
+      flex-shrink: 0;
+      width: 16px;
+      text-align: center;
+    }
+    .rebuild-step-name {
+      flex: 1;
+      color: var(--text);
+    }
+    .rebuild-step-detail {
+      color: var(--text3);
+      font-family: var(--font-mono);
+      font-size: 10px;
+    }
+    .rebuild-step.completed .rebuild-step-name {
+      color: var(--success);
+    }
+    .rebuild-step.running .rebuild-step-name {
+      color: var(--accent);
+    }
+    .rebuild-step.error .rebuild-step-name {
+      color: var(--danger);
+    }
+  </style>
 </body>
 </html>

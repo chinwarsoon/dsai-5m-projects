@@ -1,6 +1,7 @@
 """
 CSV Loader with Data Column Priority Processing
 Implements Section 1 of agent_rule.md: Data columns
+Supports multiple chunking strategies via ChunkingManager
 """
 
 import pandas as pd
@@ -8,6 +9,7 @@ import json
 from typing import Dict, Any, List, Optional
 from pathlib import Path
 from .logger import Logger, LogLevel
+from .chunking import get_chunking_manager, ChunkingManager
 
 
 class CSVLoader:
@@ -302,6 +304,33 @@ class CSVLoader:
         
         self.logger.exit_function("CSVLoader.group_data")
         return result
+
+
+    def chunk_data(self, df: pd.DataFrame, chunking_strategy: str = "row_level") -> List[Dict[str, Any]]:
+        """
+        Chunk DataFrame rows using specified chunking strategy.
+
+        Args:
+            df: DataFrame to chunk
+            chunking_strategy: Name of chunking strategy to use
+
+        Returns:
+            List of chunk dictionaries with text, metadata, and id
+        """
+        self.logger.enter_function("CSVLoader.chunk_data")
+        self.logger.info(f"Chunking data with strategy: {chunking_strategy}", "CSVLoader.chunk_data")
+        chunking_manager = get_chunking_manager(self.config, self.logger)
+        rows = df.to_dict(orient='records')
+        chunks = chunking_manager.chunk_rows_with_strategy(rows, chunking_strategy)
+        self.logger.add_trace_entry(
+            "chunks_created",
+            len(chunks),
+            "chunking_operation",
+            "success"
+        )
+        self.logger.info(f"Created {len(chunks)} chunks using {chunking_strategy}", "CSVLoader.chunk_data")
+        self.logger.exit_function("CSVLoader.chunk_data")
+        return chunks
 
 
 def load_and_process_csv(config: Dict[str, Any], logger: Logger, file_path: str) -> pd.DataFrame:

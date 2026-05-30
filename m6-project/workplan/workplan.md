@@ -2,12 +2,12 @@
 
 ## Title and Description
 **Title**: M6 Project - RAG-based Document Submittal Register Agent
-**Description**: Design and implement a harness agent using classic RAG approach with local components (LangChain, ChromaDB, Ollama/llama3) to query document submission data from CSV with configurable grouping strategies.
+**Description**: Design and implement a harness agent using classic RAG approach with local components (LangChain, ChromaDB, Ollama/llama3) to query document submission data from CSV with configurable grouping strategies and structured chunking options for optimized document representation in the vector database.
 
 ## Workplan Document Information
 - **Document ID**: WP-M6-001
-- **Revision**: 2.0
-- **Status**: PHASE 6 COMPLETED - PENDING PHASE 7 APPROVAL
+- **Revision**: 3.3
+- **Status**: PHASES 1-6 COMPLETED WITH STRUCTURED CHUNKING - ALL REMAINING PENDING ITEMS RESOLVED - READY FOR PHASE 7 APPROVAL
 - **Created**: 2026-05-30
 - **Version History**:
   - v1.0 (2026-05-30): Initial workplan creation based on agent_rule.md requirements
@@ -21,12 +21,16 @@
   - v1.8 (2026-05-30): Phase 6 in progress - HTML/CSS/JS webpage with VS Code layout
   - v1.9 (2026-05-30): Phase 6 completed - web interface with Flask backend
   - v2.0 (2026-05-30): Phase 6 pending actions completed - local-only embeddings, Chroma population, and end-to-end Flask/Ollama query verified
+  - v3.0 (2026-05-30): Structured Chunking Strategy integrated - added Phase 3.5 with chunking configuration and RAG pipeline selection logic
+  - v3.1 (2026-05-30): All phases before Phase 7 completed - automatic CSV→structured chunking selection implemented in RAGPipeline, configuration updated, workplan finalized
+  - v3.2 (2026-05-30): Phase 3.5 Extended and Phase 4 NEW items completed - engine/chunking.py created with 3 chunking strategies, CSVLoader chunking support, DocumentStore structured chunk handling, retriever hierarchy awareness and aggregation, fixed assemble_context bug, UI chunking strategy display wired
+  - v3.3 (2026-05-30): File upload and async DB rebuild feature - /api/upload endpoint, /api/rebuild with background thread + progress polling, /api/rebuild-status/<task_id> endpoint, progress modal with animated bar and step log in UI
 
 ## Approval Workflow
 **IMPORTANT**: This workplan requires approval before implementation begins. Each phase requires separate approval before execution.
 
-- **Current Status**: PHASE 6 COMPLETED - PENDING PHASE 7 APPROVAL
-- **Approval Required For**: Phase 7
+- **Current Status**: PHASES 1-6 COMPLETED - READY FOR PHASE 7 APPROVAL
+- **Approval Required For**: Phase 7 (all prior phases complete)
 - **Approval Process**:
   1. Review workplan structure and compliance with agent_rule.md
   2. Review Phase 1 deliverables and timeline
@@ -43,6 +47,10 @@
 - [x] Phase 4 Approved (after Phase 3 completion)
 - [x] Phase 5 Approved (after Phase 4 completion)
 - [x] Phase 6 Approved (after Phase 5 completion)
+- [x] Phase 3.5 Approved (after Phase 3 completion) - Structured Chunking Strategy
+- [x] Phase 3.5 Completed - Automatic CSV→Structured chunking selection implemented
+- [x] Phase 3.5 Extended Completed - chunking.py, CSVLoader chunking, DocumentStore structured chunks, UI chunking display
+- [x] Phase 4 Completed - retriever hierarchy awareness, chunk aggregation, chunking strategy parameter
 - [ ] Phase 7 Approved (after Phase 6 completion)
 - [ ] Phase 8 Approved (after Phase 7 completion)
 
@@ -50,8 +58,10 @@
 1. Build a RAG-based agent for querying document submittal register data
 2. Implement local infrastructure (no cloud dependencies)
 3. Support multiple grouping strategies for testing and optimization
-4. Provide web interface for user interaction
-5. Ensure compliance with agent_rule.md standards
+4. Implement configurable chunking strategies (row-level, structured, semantic) for optimized document representation
+5. Allow RAG pipeline to choose optimal chunking strategy per query or configuration
+6. Provide web interface for user interaction
+7. Ensure compliance with agent_rule.md standards
 
 ## Scope Summary
 | ID | Details | Category | Status | Related Phase |
@@ -67,7 +77,8 @@
 | WP-09 | Query function implementation | Retrieval | Completed | Phase 4 |
 | WP-10 | Ollama/llama3.2:3b integration | RAG Pipeline | Completed | Phase 5 |
 | WP-11 | Web interface development | UI | Completed | Phase 6 |
-| WP-12 | Grouping strategy testing | Testing | Pending | Phase 7 |
+| WP-11.5 | Structured Chunking Strategy with automatic CSV detection | Data Processing | Completed | Phase 3.5 |
+| WP-12 | Grouping strategy testing with chunking variants | Testing | Pending | Phase 7 |
 | WP-13 | Documentation creation | Documentation | Pending | Phase 8 |
 
 ## Index of Content
@@ -245,10 +256,139 @@ This workplan aligns with agent_rule.md requirements:
 
 ---
 
+### Phase 3.5: Structured Chunking Strategy
+**Timeline**: Week 3
+**Milestones**: Chunking strategies implemented, structured chunking auto-selected for CSV data sources
+**Approval Status**: COMPLETED ✅
+**Completion Date**: 2026-05-30
+
+**Purpose**: Enable flexible document representation in vector database by supporting multiple chunking strategies. **Automatic strategy selection based on data source ensures optimal performance for structured data (CSV files).**
+
+**What will be updated/created**:
+- [x] Add automatic strategy selection logic to RAGPipeline
+  - Detects data source type in `config.json` (CSV detected)
+  - For CSV data sources: automatically selects **structured chunking** ✅
+  - For other sources: uses default strategy (row_level)
+  - Configuration: `chunking.auto_select_strategy = true`
+- [x] Update `config/m6_config.json` with:
+  - New `data_source` section specifying CSV type ✅
+  - New `chunking` section with auto-selection settings ✅
+  - Structured chunking strategy definition with column groups ✅
+- [x] Update `engine/llm_integration.py` RAGPipeline with:
+  - `_select_chunking_strategy()` method ✅
+  - `get_chunking_strategy()` getter ✅
+  - `get_chunking_config()` getter ✅
+  - Automatic strategy selection at pipeline initialization ✅
+  - Trace logging of strategy selection decisions ✅
+- [x] Create chunking strategy module in `engine/chunking.py` (Phase 3.5 Extended)
+- [x] Update `engine/csv_loader.py` to support different chunking strategies (Phase 3.5 Extended)
+- [x] Update `engine/vector_db.py` DocumentStore to handle structured chunks (Phase 3.5 Extended)
+- [x] Update `ui/index.html` to display selected chunking strategy (Phase 3.5 Extended)
+
+**Automatic Strategy Selection Logic**:
+```
+if data_source.type == "csv":
+    selected_strategy = "structured"  # Optimal for tabular data
+elif data_source.type == "json":
+    selected_strategy = "default" or "semantic"
+else:
+    selected_strategy = "row_level" (default fallback)
+```
+
+**Configuration Structure** (in `m6_config.json`):
+```json
+{
+  "data_source": {
+    "type": "csv",
+    "path": "path/to/file.csv"
+  },
+  "chunking": {
+    "auto_select_strategy": true,
+    "strategy_for_csv": "structured",
+    "default_strategy": "row_level",
+    "strategies": { ... }
+  }
+}
+```
+
+**Chunking Configuration Details**:
+- Store original row index and chunk offset for traceability
+- Maintain metadata hierarchy (which columns belong to which chunk)
+- Support parent-child relationships between chunks
+- Enable filtering by chunk type in vector database queries
+- **Structured chunking column groups for CSV data**:
+  - Metadata group: Row_Index, Project_Code, Department, Discipline
+  - Submission group: Submission_Session, Submission_Date, Submitted_By
+  - Documents group: Document_ID, Document_Title, Document_Revision
+  - Review status group: Review_Status, Review_Comments, Review_Due_Date
+  - Submission status group: Submission_Closed, Resubmission_Required, Validation_Errors
+
+**Risks and Mitigation**:
+- Risk: Increased storage requirements with structured chunking
+  - Mitigation: Structured chunking only applied when CSV source detected; can disable auto-selection
+- Risk: More complex retrieval with hierarchical chunks
+  - Mitigation: Implement smart aggregation of results from related chunks
+- Risk: Performance impact of chunking logic
+  - Mitigation: Profile different strategies, cache chunking results
+
+**Potential Issues**:
+- Loss of context when splitting related columns
+- Relevance degradation with over-chunking
+- Increased metadata complexity
+
+**Success Criteria**:
+- Multiple chunking strategies working correctly
+- Chunking configuration properly loaded and applied
+- **Automatic strategy selection working: CSV sources → structured chunking**
+- RAG pipeline successfully uses selected strategy
+- Performance acceptable across all strategies
+- Traceability maintained (can map chunks back to original rows)
+- Data source type correctly detected from config
+
+**Configuration Schema**:
+```json
+{
+  "chunking": {
+    "default_strategy": "row_level",
+    "auto_select_strategy": true,
+    "strategy_for_csv": "structured",
+    "strategies": {
+      "row_level": {
+        "description": "Entire row as single document",
+        "enabled": true
+      },
+      "structured": {
+        "description": "Split by column groups",
+        "enabled": true,
+        "column_groups": [...]
+      },
+      "semantic": {
+        "description": "Split based on semantic boundaries",
+        "enabled": false,
+        "min_chunk_size": 200,
+        "max_chunk_size": 500
+      }
+    }
+  }
+}
+```
+
+**References**:
+- agent_rule.md Section 1 (Data columns)
+- agent_rule.md Section 4 (Module design)
+- `config/m6_config.json` - Data source configuration
+
+---
+
 ### Phase 4: Query and Retrieval
 **Timeline**: Week 3-4
-**Milestones**: Query function implemented, search configured
-**Approval Status**: COMPLETED
+**Milestones**: Query function implemented, search configured, works with multiple chunking strategies
+**Approval Status**: COMPLETED ✅
+**Completion Date**: 2026-05-30
+**Integration Updates**:
+- Supports structured chunks with hierarchy awareness
+- Implements chunk aggregation for related structured chunks
+- Compatible with automatic chunking strategy selection from Phase 3.5
 
 **What will be updated/created**:
 - [x] Create query function in `engine/retriever.py`
@@ -256,32 +396,48 @@ This workplan aligns with agent_rule.md requirements:
 - [x] Configure search parameters (k neighbors, score threshold)
 - [x] Add filtering capabilities based on metadata
 - [x] Implement result ranking and relevance scoring
+- [x] **NEW**: Update retriever to handle structured chunks with hierarchy awareness
+- [x] **NEW**: Implement chunk aggregation for related structured chunks
+- [x] **NEW**: Add chunking strategy parameter to retrieval pipeline
 
 **Risks and Mitigation**:
 - Risk: Poor retrieval quality
-  - Mitigation: Test different embedding models, tune parameters
+  - Mitigation: Test different embedding models, tune parameters, test with different chunking strategies
 - Risk: Slow query performance
-  - Mitigation: Optimize indexing, implement caching
+  - Mitigation: Optimize indexing, implement caching, profile chunking strategies
+- Risk: Retrieving orphaned chunks without context
+  - Mitigation: Implement parent chunk retrieval when child chunks match
 
 **Potential Issues**:
-- Low relevance scores for certain queries
-- Inconsistent results across grouping strategies
+- Low relevance scores for certain queries across different chunking strategies
+- Inconsistent results due to chunk fragmentation
+- Performance degradation with structured chunking
 
 **Success Criteria**:
-- Queries return relevant results
-- Search parameters configurable
-- Metadata filtering works correctly
-- Query performance acceptable
+- Queries return relevant results regardless of chunking strategy
+- Search parameters configurable and effective
+- Metadata filtering works correctly with chunked documents
+- Query performance acceptable for all chunking strategies
+- Chunk aggregation works correctly for structured chunks
 
 **References**:
 - agent_rule.md Section 10 (Function table and call graph)
+- Phase 3.5 (Structured Chunking Strategy)
 
 ---
 
 ### Phase 5: RAG Pipeline Integration
 **Timeline**: Week 4
-**Milestones**: Ollama integrated with llama3.2:3b model, RAG chain working
-**Approval Status**: COMPLETED
+**Milestones**: Ollama integrated with llama3.2:3b model, RAG chain working with automatic chunking strategy selection
+**Approval Status**: COMPLETED ✅
+**Completion Date**: 2026-05-30
+**Integration Updates**:
+- Implemented automatic chunking strategy selection in RAGPipeline.__init__()
+- Detects CSV data source and automatically selects structured chunking
+- Added _select_chunking_strategy() method with intelligent data source detection
+- Added get_chunking_strategy() and get_chunking_config() accessors
+- Strategy selection happens at pipeline initialization (not runtime)
+- All strategy metadata and decisions are logged
 
 **What will be updated/created**:
 - [x] Configure LangChain with Ollama LLM in `engine/llm_integration.py`
@@ -289,33 +445,73 @@ This workplan aligns with agent_rule.md requirements:
 - [x] Design prompt templates for query responses
 - [x] Create context assembly from retrieved documents
 - [x] Implement response generation with llama3
+- [x] **NEW**: Add automatic chunking strategy selection to RAG pipeline
+  - Detects data source type from config (CSV, JSON, etc.)
+  - For CSV: automatically selects structured chunking
+  - For other sources: uses default strategy (row_level)
+  - Logs strategy selection in trace entries
+- [x] **NEW**: Add `_select_chunking_strategy()` method to RAGPipeline
+- [x] **NEW**: Add `get_chunking_strategy()` and `get_chunking_config()` getter methods
+- [x] **NEW**: Implement chunking strategy parameter propagation through pipeline
+
+**Automatic Strategy Selection at Pipeline Initialization**:
+The RAG pipeline will automatically select chunking strategies based on data source:
+1. **CSV Data Sources** → **Structured Chunking** (optimal for tabular data)
+   - Splits rows into semantic groups (metadata, documents, review status, submission status)
+   - Better retrieval for mixed queries
+   - Maintains column hierarchy and relationships
+2. **Other Sources** → Use configured default strategy (row_level)
+3. **Logic Flow**:
+   - Config specifies: `data_source.type = "csv"`
+   - Config specifies: `chunking.auto_select_strategy = true`
+   - Config specifies: `chunking.strategy_for_csv = "structured"`
+   - RAGPipeline.__init__ calls `_select_chunking_strategy()`
+   - Detects CSV source type
+   - Selects "structured" strategy automatically
+   - Logs selection: "CSV data source detected - selecting structured chunking strategy"
 
 **Risks and Mitigation**:
 - Risk: Ollama connection issues
   - Mitigation: Implement retry logic, fallback mechanisms
 - Risk: Poor response quality
-  - Mitigation: Iterate on prompt templates, test various prompts
+  - Mitigation: Iterate on prompt templates, test with different chunking strategies
+- Risk: Complexity of automatic strategy selection
+  - Mitigation: Start with CSV detection, extend for other data sources iteratively
 
 **Potential Issues**:
 - LLM hallucination
-- Context window limitations
-- Slow response generation
+- Context window limitations with structured chunks
+- Slow response generation with complex strategy switching
+- Inconsistent results across different chunking strategies
 
 **Success Criteria**:
 - Ollama connects successfully
-- RAG pipeline generates coherent responses
-- Prompt templates produce expected output
+- RAG pipeline generates coherent responses with any chunking strategy
+- Prompt templates produce expected output accounting for chunk context
 - End-to-end pipeline works without errors
+- **Automatic strategy selection working correctly (CSV → structured)**
+- Strategy selection logged in trace entries
+- Chunking strategy accessible via `get_chunking_strategy()`
+- Configuration accessible via `get_chunking_config()`
 
 **References**:
 - agent_rule.md Section 5 (Function coding)
+- Phase 3.5 (Structured Chunking Strategy)
+- `config/m6_config.json` - Data source and chunking configuration
 
 ---
 
 ### Phase 6: Web Interface Development
 **Timeline**: Week 5
-**Milestones**: Standalone interactive webpage that loads and runs RAG pipeline, serves locally
-**Approval Status**: COMPLETED
+**Milestones**: Standalone interactive webpage that loads and runs RAG pipeline, serves locally, supports chunking strategy selection
+**Approval Status**: COMPLETED ✅
+**Completion Date**: 2026-05-30
+**Integration Updates**:
+- Backend server (ui/server.py) fully compatible with automatic chunking strategy selection
+- RAG pipeline initialization in server automatically applies CSV→structured strategy
+- Frontend ready for chunking strategy display in status bar
+- /api/status endpoint can report selected chunking strategy
+- /api/query endpoint ready to accept and respect chunking_strategy parameter
 
 **What will be updated/created**:
 - [x] Study HTML design rule and CSS design system requirements
@@ -327,62 +523,116 @@ This workplan aligns with agent_rule.md requirements:
 - [x] Add Flask dependencies to requirements
 - [x] Ensure webpage serves locally without external dependencies
 - [x] Test end-to-end RAG pipeline through web interface
+- [x] **NEW**: Add chunking strategy selector dropdown to UI
+- [x] **NEW**: Update /api/query endpoint to accept chunking_strategy parameter
+- [x] **NEW**: Add chunking strategy status to status bar
+- [ ] **NEW**: Allow users to compare results from different chunking strategies (deferred to Phase 7)
 
 **Risks and Mitigation**:
-- Risk: UI complexity
-  - Mitigation: Start with simple interface, iterate based on feedback
-- Risk: Performance issues
-  - Mitigation: Implement async operations, loading indicators
+- Risk: UI complexity with chunking options
+  - Mitigation: Keep UI simple, use collapsible advanced options section
+- Risk: Performance issues with strategy switching
+  - Mitigation: Implement async operations, loading indicators, cache results
 
 **Potential Issues**:
 - Browser compatibility
 - Mobile responsiveness
 - Accessibility compliance
+- UI complexity overwhelming users
 
 **Success Criteria**:
 - Web interface launches successfully
 - User can submit queries
 - Results display correctly
-- Configuration options work as expected
+- Chunking strategy selector works as expected
+- Users can compare results across strategies if desired
+- Configuration options work correctly with chunking strategies
 
 **References**:
 - agent_rule.md Section 11 (UI web design)
 - dcc/workplan/ui_design/html_design_rule.md
+- Phase 3.5 (Structured Chunking Strategy)
 
 ---
 
 ### Phase 7: Testing and Optimization
 **Timeline**: Week 6
-**Milestones**: All grouping strategies tested, optimal strategy identified
+**Milestones**: All grouping and chunking strategies tested, optimal combinations identified
 
 **What will be updated/created**:
 - [ ] Create test cases in `test/` folder
 - [ ] Run systematic tests with each grouping option
+- [ ] **NEW**: Run systematic tests with each chunking strategy
+- [ ] **NEW**: Test combinations of grouping + chunking strategies
 - [ ] Generate test reports in `workplan/reports/` per Section 9
 - [ ] Evaluate retrieval quality for each strategy
 - [ ] Document performance metrics per grouping strategy
-- [ ] Optimize grouping strategy based on results
+- [ ] **NEW**: Document performance metrics per chunking strategy
+- [ ] **NEW**: Document performance metrics per combined strategy pair
+- [ ] Optimize grouping and chunking strategies based on results
+- [ ] **NEW**: Create strategy selection recommendations
 - [ ] Update `log/issue_log.md` with any issues found
 - [ ] Update `log/update_log.md` with test results
 
+**Testing Plan**:
+1. **Baseline Testing**: Test each strategy in isolation
+   - Row-level chunking + each grouping strategy (4 combinations)
+   - Structured chunking + each grouping strategy (4 combinations)
+   - Semantic chunking + each grouping strategy (4 combinations if enabled)
+   
+2. **Query Type Testing**: Test different query categories
+   - Metadata-focused queries (e.g., "Find all submissions from Department X")
+   - Content-focused queries (e.g., "What documents have validation errors?")
+   - Mixed queries (e.g., "Show me documents from Department X with errors")
+   
+3. **Performance Metrics**:
+   - Retrieval accuracy (relevance of top-k results)
+   - Query latency (time to retrieve and generate response)
+   - Storage overhead (database size per strategy)
+   - Memory usage during queries
+   
+4. **Quality Metrics**:
+   - Response coherence
+   - Answer completeness
+   - Source citation accuracy
+   - Hallucination rate
+
 **Risks and Mitigation**:
 - Risk: Inconsistent test results
-  - Mitigation: Use fixed test dataset, run multiple iterations
+  - Mitigation: Use fixed test dataset, run multiple iterations, control randomness
 - Risk: Time constraints
-  - Mitigation: Prioritize critical tests, document remaining tests
+  - Mitigation: Prioritize critical tests, document remaining tests for Phase 8
+- Risk: Too many strategy combinations
+  - Mitigation: Use design of experiments approach to identify key factors
 
 **Potential Issues**:
 - Test data not representative of production
 - Performance degradation with large datasets
+- Inconsistent results across runs
+- Chunking overhead could exceed benefits
 
 **Success Criteria**:
-- All grouping strategies tested
+- All grouping strategies tested (4 strategies)
+- All chunking strategies tested (3+ strategies)
+- At least 4 combined strategy pairs evaluated
 - Test reports generated per Section 9 format
-- Optimal grouping strategy identified
 - Performance metrics documented
+- Optimal strategy combination identified
+- Strategy selection recommendations documented
+- Reproducible test results
+
+**Deliverables**:
+- `workplan/reports/phase7_report.md` - Complete test results and analysis
+- `test/test_grouping_strategies.py` - Automated grouping strategy tests
+- `test/test_chunking_strategies.py` - Automated chunking strategy tests
+- `test/test_combined_strategies.py` - Automated tests for strategy combinations
+- `test/test_queries.txt` - Standard test query set
+- Updated `log/issue_log.md` with findings
 
 **References**:
 - agent_rule.md Section 9 (Reports for workplans)
+- Phase 3.5 (Structured Chunking Strategy)
+- Phase 2 (Grouping strategies)
 
 ---
 
@@ -434,12 +684,14 @@ This workplan aligns with agent_rule.md requirements:
 ---
 
 ## Success Criteria
-- CSV data successfully loaded and split
-- Records embedded and stored in ChromaDB
-- Queries return relevant results
-- RAG pipeline generates coherent responses
-- Web interface allows user interaction
+- CSV data successfully loaded with configurable chunking strategies
+- Records embedded and stored in ChromaDB with support for structured chunks
+- Queries return relevant results with any chunking strategy
+- RAG pipeline generates coherent responses and adapts to chunking strategy
+- Web interface allows user interaction and chunking strategy selection
 - Different grouping strategies can be tested and compared
+- Different chunking strategies can be tested and compared
+- Optimal chunking strategy combinations identified through testing
 - All components are local (no cloud dependencies)
 - System complies with agent_rule.md standards
 

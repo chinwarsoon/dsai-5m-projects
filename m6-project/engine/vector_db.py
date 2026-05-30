@@ -396,6 +396,69 @@ class DocumentStore:
         self.vector_db.add_embeddings(embeddings, rows, ids)
         
         self.logger.exit_function("DocumentStore.store_rows_with_embeddings")
+    
+    def store_structured_chunks(
+        self,
+        chunks: List[Dict[str, Any]],
+    ) -> None:
+        """
+        Store structured chunks in vector database with hierarchy metadata.
+        
+        Each chunk contains:
+        - text: Document text for embedding
+        - metadata: Dict with chunk_type, chunk_group, parent_row_index, etc.
+        - id: Unique chunk identifier
+
+        Args:
+            chunks: List of chunk dicts from ChunkingManager
+        """
+        self.logger.enter_function("DocumentStore.store_structured_chunks")
+        self.logger.info(f"Storing {len(chunks)} structured chunks", "DocumentStore.store_structured_chunks")
+
+        documents = [c["text"] for c in chunks]
+        metadatas = [c["metadata"] for c in chunks]
+        ids = [c["id"] for c in chunks]
+
+        self.vector_db.add_documents(documents, metadatas, ids)
+
+        self.logger.add_trace_entry(
+            "structured_chunks_stored",
+            len(chunks),
+            "document_store",
+            "success"
+        )
+        self.logger.exit_function("DocumentStore.store_structured_chunks")
+
+    def get_related_chunks(self, parent_row_index: int) -> List[Dict[str, Any]]:
+        """
+        Retrieve all chunks belonging to the same parent row.
+        Used for chunk aggregation to reconstruct full row context.
+
+        Args:
+            parent_row_index: The parent row index
+
+        Returns:
+            List of related chunks
+        """
+        self.logger.enter_function("DocumentStore.get_related_chunks")
+        self.logger.trace(f"Getting chunks for parent row: {parent_row_index}", "DocumentStore.get_related_chunks")
+        try:
+            results = self.vector_db.collection.get(
+                where={"parent_row_index": parent_row_index}
+            )
+            related = []
+            if results and results.get('ids'):
+                for i in range(len(results['ids'])):
+                    related.append({
+                        "id": results['ids'][i],
+                        "text": results['documents'][i] if results.get('documents') else "",
+                        "metadata": results['metadatas'][i] if results.get('metadatas') else {}
+                    })
+            self.logger.exit_function("DocumentStore.get_related_chunks")
+            return related
+        except Exception:
+            self.logger.exit_function("DocumentStore.get_related_chunks")
+            return []
 
 
 def get_vector_database(

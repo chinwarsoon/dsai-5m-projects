@@ -287,6 +287,7 @@ class Retriever:
 class AdvancedRetriever(Retriever):
     """
     Advanced retriever with additional features
+    Supports structured chunk hierarchy awareness and chunk aggregation
     """
     
     def __init__(self, vector_db: VectorDatabase, config: Dict[str, Any], logger: Logger):
@@ -302,8 +303,195 @@ class AdvancedRetriever(Retriever):
         self.logger.enter_function("AdvancedRetriever.__init__")
         
         self.grouping_config = config.get('grouping_strategies', [])
+        self.chunking_config = config.get('chunking', {})
+        self.selected_strategy = None
         
         self.logger.exit_function("AdvancedRetriever.__init__")
+
+    def set_chunking_strategy(self, strategy_name: str) -> None:
+        """
+        Set the chunking strategy for retrieval operations.
+        
+        Args:
+            strategy_name: Name of chunking strategy
+        """
+        self.selected_strategy = strategy_name
+        self.logger.info(f"Chunking strategy set to: {strategy_name}", "AdvancedRetriever.set_chunking_strategy")
+
+    def query_with_chunking(
+        self,
+        query_text: str,
+        k: int = 10,
+        score_threshold: float = 0.0,
+        where: Optional[Dict[str, Any]] = None,
+        chunking_strategy: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Query with awareness of chunking strategy.
+        For structured chunks, aggregates related chunks to provide full row context.
+
+        Args:
+            query_text: Query text
+            k: Number of results to return
+            score_threshold: Minimum similarity score threshold
+            where: Metadata filter conditions
+            chunking_strategy: Chunking strategy name for awareness logic
+
+        Returns:
+            Query results with optional aggregation
+        """
+        self.logger.enter_function("AdvancedRetriever.query_with_chunking")
+        self.logger.info(
+            f"Querying with chunking strategy: {chunking_strategy or self.selected_strategy or 'none'}",
+            "AdvancedRetriever.query_with_chunking"
+        )
+        
+        results = super().query(
+            query_text=query_text,
+            k=k,
+            score_threshold=score_threshold,
+            where=where
+        )
+        
+        strategy = chunking_strategy or self.selected_strategy
+        if strategy == "structured":
+            results = self._aggregate_structured_chunks(results)
+            results = self._deduplicate_by_parent_row(results)
+        
+        self.logger.add_trace_entry(
+            "query_with_chunking_results",
+            len(results.get('ids', [[]])[0]) if results.get('ids') else 0,
+            "advanced_retrieval",
+            "success"
+        )
+        
+        self.logger.exit_function("AdvancedRetriever.query_with_chunking")
+        return results
+
+    def _deduplicate_by_parent_row(self, results: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Deduplicate results by parent_row_index, keeping the best scoring chunk per row.
+        
+        Args:
+            results: Query results
+            
+        Returns:
+            Deduplicated results
+        """
+        if not results.get('ids'):
+            return results
+        
+        seen_rows = {}
+        for i in range(len(results['ids'][0])):
+            metadata = results['metadatas'][0][i] if results.get('metadatas') else {}
+            parent_idx = metadata.get('parent_row_index', i)
+            distance = results['distances'][0][i] if results.get('distances') else 0
+            
+            if parent_idx not in seen_rows or distance < seen_rows[parent_idx]['distance']:
+                seen_rows[parent_idx] = {
+                    'index': i,
+                    'distance': distance
+                }
+        
+        deduped = {
+            'ids': [[]],
+            'documents': [[]],
+            'metadatas': [[]],
+            'distances': [[]]
+        }
+        sorted_entries = sorted(seen_rows.values(), key=lambda x: x['distance'])
+        for entry in sorted_entries:
+            i = entry['index']
+            deduped['ids'][0].append(results['ids'][0][i])
+            if results.get('documents'):
+                deduped['documents'][0].append(results['documents'][0][i])
+            if results.get('metadatas'):
+                deduped['metadatas'][0].append(results['metadatas'][0][i])
+            if results.get('distances'):
+                deduped['distances'][0].append(results['distances'][0][i])
+        
+        return deduped
+
+    def _aggregate_structured_chunks(self, results: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Aggregate related structured chunks to provide full row context.
+        When multiple chunks from the same parent row are retrieved,
+        combine them into a single result with richer context.
+
+        Args:
+            results: Query results from vector database
+
+        Returns:
+            Aggregated results with combined row context
+        """
+        if not results.get('ids') or not results.get('metadatas'):
+            return results
+        
+        row_groups = {}
+        chunk_types = {}
+        
+        for i in range(len(results['ids'][0])):
+            chunk_id = results['ids'][0][i]
+            metadata = results['metadatas'][0][i]
+            document = results['documents'][0][i] if results.get('documents') else ""
+            distance = results['distances'][0][i] if results.get('distances') else 0
+            
+            parent_idx = metadata.get('parent_row_index', i)
+            chunk_type = metadata.get('chunk_type', 'row_level')
+            chunk_group = metadata.get('chunk_group', 'unknown')
+            
+            if parent_idx not in row_groups:
+                row_groups[parent_idx] = {
+                    'ids': [],
+                    'documents': [],
+                    'metadatas': [],
+                    'distances': [],
+                    'chunk_groups': set(),
+                    'min_distance': distance
+                }
+            
+            row_groups[parent_idx]['ids'].append(chunk_id)
+            row_groups[parent_idx]['documents'].append(document)
+            row_groups[parent_idx]['metadatas'].append(metadata)
+            row_groups[parent_idx]['distances'].append(distance)
+            row_groups[parent_idx]['chunk_groups'].add(chunk_group)
+            row_groups[parent_idx]['min_distance'] = min(
+                row_groups[parent_idx]['min_distance'], distance
+            )
+            chunk_types[parent_idx] = chunk_type
+        
+        aggregated = {
+            'ids': [[]],
+            'documents': [[]],
+            'metadatas': [[]],
+            'distances': [[]]
+        }
+        
+        sorted_rows = sorted(row_groups.items(), key=lambda x: x[1]['min_distance'])
+        for parent_idx, group in sorted_rows:
+            aggregated['ids'][0].append(f"aggregated_row_{parent_idx}")
+            
+            combined_text = " | ".join(group['documents'])
+            aggregated['documents'][0].append(combined_text)
+            
+            combined_metadata = {}
+            for md in group['metadatas']:
+                combined_metadata.update(md)
+            combined_metadata['aggregated'] = True
+            combined_metadata['aggregated_chunks'] = len(group['ids'])
+            combined_metadata['chunk_types'] = list(group['chunk_groups'])
+            aggregated['metadatas'][0].append(combined_metadata)
+            
+            aggregated['distances'][0].append(group['min_distance'])
+        
+        self.logger.add_trace_entry(
+            "aggregated_chunks_count",
+            len(aggregated['ids'][0]),
+            "chunk_aggregation",
+            "success"
+        )
+        
+        return aggregated
     
     def query_with_grouping(
         self,

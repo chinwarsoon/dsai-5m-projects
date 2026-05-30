@@ -123,5 +123,64 @@
     "model_name": "all-MiniLM-L6-v2",
     "device": "cpu",
     "local_files_only": true
+  },
+  "data_source": {
+    "type": "csv",
+    "path": "/home/franklin/dsai/dsai-5m-projects/m6-project/data/processed_dcc_universal.csv",
+    "description": "Structured CSV with 47 columns from document submittal register"
+  },
+  "chunking": {
+    "auto_select_strategy": true,
+    "strategy_for_csv": "structured",
+    "default_strategy": "row_level",
+    "strategies": {
+      "row_level": {
+        "name": "row_level",
+        "description": "Entire row as single document",
+        "enabled": true,
+        "best_for": "When full row context is needed, fast retrieval"
+      },
+      "structured": {
+        "name": "structured",
+        "description": "Split rows into semantic chunks by column groups",
+        "enabled": true,
+        "best_for": "CSV data with distinct column groups",
+        "column_groups": [
+          {
+            "name": "metadata",
+            "description": "Meta information",
+            "columns": ["Row_Index", "Project_Code", "Department", "Discipline", "Section_Category"]
+          },
+          {
+            "name": "submission_session",
+            "description": "Submission session information",
+            "columns": ["Submission_Session", "Submission_Date", "Submitted_By"]
+          },
+          {
+            "name": "documents",
+            "description": "Document identification and revision",
+            "columns": ["Document_ID", "Document_Number", "Document_Title", "Document_Revision"]
+          },
+          {
+            "name": "review_status",
+            "description": "Review workflow status",
+            "columns": ["Review_Status", "Review_Return_Actual_Date", "Review_Due_Date", "Review_Comments"]
+          },
+          {
+            "name": "submission_status",
+            "description": "Submission and resubmission status",
+            "columns": ["Submission_Closed", "Resubmission_Required", "Resubmission_Overdue_Status", "Validation_Errors"]
+          }
+        ]
+      },
+      "semantic": {
+        "name": "semantic",
+        "description": "Split based on semantic boundaries",
+        "enabled": false,
+        "best_for": "Unstructured data",
+        "min_chunk_size": 200,
+        "max_chunk_size": 500
+      }
+    }
   }
 }
